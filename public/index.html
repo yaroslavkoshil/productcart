@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PromAI Filler</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>PromAI Filler</h1>
+            <p>Автоматичне наповнення карток товарів Prom.ua за допомогою ШІ</p>
+        </header>
+
+        <main id="app">
+            <section class="auth-section card">
+                <h2>Підключення</h2>
+                <div class="form-group">
+                    <label for="prom-token">Prom.ua API Token</label>
+                    <input type="password" id="prom-token" placeholder="Введіть ваш Prom API токен">
+                </div>
+                <div class="form-group">
+                    <label for="gemini-token">Google Gemini API Key</label>
+                    <input type="password" id="gemini-token" placeholder="Введіть ваш Gemini API ключ">
+                </div>
+                <button id="connect-btn" class="btn primary">Підключитися та завантажити товари</button>
+            </section>
+        </main>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
