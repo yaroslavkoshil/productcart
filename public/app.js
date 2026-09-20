@@ -181,9 +181,12 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         const filtered = currentProducts.filter(p => {
-            const name = (p.name_uk || p.name || '').toLowerCase();
+            const nameRu = (p.name || '').toLowerCase();
+            const nameUk = (p.name_multilang && p.name_multilang.uk ? p.name_multilang.uk : '').toLowerCase();
             const id = (p.id || '').toString().toLowerCase();
-            return name.includes(query) || id.includes(query);
+            const sku = (p.sku || '').toString().toLowerCase();
+            
+            return nameRu.includes(query) || nameUk.includes(query) || id.includes(query) || sku.includes(query);
         });
         
         renderProducts(filtered);
