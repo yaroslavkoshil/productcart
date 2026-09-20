@@ -1,13 +1,13 @@
 :root {
-    --bg-color: #0f172a;
-    --card-bg: #1e293b;
-    --text-color: #f8fafc;
-    --text-muted: #94a3b8;
+    --bg-color: #f8fafc; /* Light gray background */
+    --card-bg: #ffffff; /* White cards */
+    --text-color: #0f172a; /* Dark text */
+    --text-muted: #64748b; /* Gray text */
     --primary: #10b981; /* Prom Green */
     --primary-hover: #059669;
-    --secondary: #334155;
-    --secondary-hover: #475569;
-    --border: #334155;
+    --secondary: #e2e8f0; /* Light gray button */
+    --secondary-hover: #cbd5e1;
+    --border: #e2e8f0; /* Light gray border */
     --danger: #ef4444;
 }
 
@@ -125,7 +125,7 @@ input:focus {
 
 .btn.secondary {
     background-color: var(--secondary);
-    color: white;
+    color: var(--text-color);
 }
 .btn.secondary:hover { background-color: var(--secondary-hover); }
 

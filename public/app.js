@@ -105,6 +105,21 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    // Обробник кліків по групах
+    groupsList.addEventListener('click', (e) => {
+        const item = e.target.closest('.group-item');
+        if (!item) return;
+
+        // Знімаємо active з усіх
+        document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
+        // Додаємо active на вибраний
+        item.classList.add('active');
+
+        // Завантажуємо товари для вибраної групи
+        const promToken = localStorage.getItem('promToken');
+        loadProducts(promToken, item.dataset.id);
+    });
+
     async function loadProducts(promToken, groupId = null) {
         productsGrid.innerHTML = '<div class="loading">Завантаження товарів...</div>';
         try {
