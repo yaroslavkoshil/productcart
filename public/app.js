@@ -96,14 +96,55 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderGroups(groups) {
         if (!groups || groups.length === 0) return;
+
+        // Будуємо дерево груп
+        const groupsMap = {};
+        const rootGroups = [];
+
+        // Ініціалізуємо мапу
+        groups.forEach(g => {
+            g.children = [];
+            groupsMap[g.id] = g;
+        });
+
+        // Розподіляємо по батьківських групах
+        groups.forEach(g => {
+            const parentId = g.parent_group_id || g.parent_id;
+            if (parentId && groupsMap[parentId]) {
+                groupsMap[parentId].children.push(g);
+            } else {
+                rootGroups.push(g);
+            }
+        });
+
         groupsList.innerHTML = '<div class="group-item active" data-id="all">Усі товари</div>';
-        groups.forEach(group => {
+
+        // Рекурсивна функція для малювання дерева
+        function renderNode(node, level = 0) {
             const div = document.createElement('div');
             div.className = 'group-item';
-            div.textContent = group.name;
-            div.dataset.id = group.id;
+            div.dataset.id = node.id;
+            
+            // Робимо відступ для підкатегорій
+            div.style.paddingLeft = `${15 + (level * 20)}px`;
+            
+            if (level > 0) {
+                div.style.fontSize = '0.9em';
+                div.style.color = 'var(--text-secondary)';
+                div.textContent = '└ ' + node.name;
+            } else {
+                div.style.fontWeight = '500';
+                div.textContent = node.name;
+            }
+
             groupsList.appendChild(div);
-        });
+
+            if (node.children && node.children.length > 0) {
+                node.children.forEach(child => renderNode(child, level + 1));
+            }
+        }
+
+        rootGroups.forEach(g => renderNode(g, 0));
     }
 
     // Обробник кліків по групах
