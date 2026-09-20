@@ -103,14 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const groupsMap = {};
         const rootGroups = [];
 
-        // Ініціалізуємо мапу і зберігаємо глобально
         groups.forEach(g => {
             g.children = [];
             groupsMap[g.id] = g;
         });
         allGroupsMap = groupsMap;
 
-        // Розподіляємо по батьківських групах
         groups.forEach(g => {
             const parentId = g.parent_group_id || g.parent_id;
             if (parentId && groupsMap[parentId]) {
@@ -120,46 +118,108 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
 
-        groupsList.innerHTML = '<div class="group-item active" data-id="all">Усі товари</div>';
+        // Читаємо збережені стани з localStorage
+        const collapsedGroups = JSON.parse(localStorage.getItem('collapsedGroups') || '{}');
+        const lastGroupId = localStorage.getItem('lastGroupId') || 'all';
 
-        // Рекурсивна функція для малювання дерева
+        groupsList.innerHTML = '';
+
+        // Додаємо кнопку "Усі товари"
+        const allDiv = document.createElement('div');
+        allDiv.className = 'group-item' + (lastGroupId === 'all' ? ' active' : '');
+        allDiv.dataset.id = 'all';
+        allDiv.textContent = 'Усі товари';
+        allDiv.style.fontWeight = '500';
+        groupsList.appendChild(allDiv);
+
         function renderNode(node, level = 0) {
+            const hasChildren = node.children && node.children.length > 0;
+            const isCollapsed = collapsedGroups[node.id] === true;
+
             const div = document.createElement('div');
-            div.className = 'group-item';
+            div.className = 'group-item' + (String(node.id) === String(lastGroupId) ? ' active' : '');
             div.dataset.id = node.id;
-            
-            // Робимо відступ для підкатегорій
-            div.style.paddingLeft = `${15 + (level * 20)}px`;
-            
-            if (level > 0) {
-                div.style.fontSize = '0.9em';
-                div.style.color = 'var(--text-secondary)';
-                div.textContent = '└ ' + node.name;
-            } else {
+            div.style.paddingLeft = `${14 + level * 18}px`;
+
+            if (level === 0) {
                 div.style.fontWeight = '500';
-                div.textContent = node.name;
+                if (hasChildren) {
+                    // Стрілка для згортання
+                    const arrow = document.createElement('span');
+                    arrow.className = 'group-arrow';
+                    arrow.textContent = isCollapsed ? '▶ ' : '▼ ';
+                    arrow.dataset.toggleId = node.id;
+                    div.appendChild(arrow);
+                    div.appendChild(document.createTextNode(node.name));
+                } else {
+                    div.textContent = node.name;
+                }
+            } else {
+                div.style.fontSize = '0.88em';
+                div.textContent = '└ ' + node.name;
             }
 
             groupsList.appendChild(div);
 
-            if (node.children && node.children.length > 0) {
-                node.children.forEach(child => renderNode(child, level + 1));
+            if (hasChildren) {
+                const childrenContainer = document.createElement('div');
+                childrenContainer.dataset.parentId = node.id;
+                childrenContainer.style.display = isCollapsed ? 'none' : 'block';
+                node.children.forEach(child => {
+                    // Рендеримо дітей у контейнер
+                    const childDiv = document.createElement('div');
+                    childDiv.className = 'group-item' + (String(child.id) === String(lastGroupId) ? ' active' : '');
+                    childDiv.dataset.id = child.id;
+                    childDiv.style.paddingLeft = `${14 + (level + 1) * 18}px`;
+                    childDiv.style.fontSize = '0.88em';
+                    childDiv.textContent = '└ ' + child.name;
+                    childrenContainer.appendChild(childDiv);
+                });
+                groupsList.appendChild(childrenContainer);
             }
         }
 
         rootGroups.forEach(g => renderNode(g, 0));
+
+        // Відновлюємо останню вибрану групу і завантажуємо товари
+        currentGroupId = lastGroupId;
+        const promToken = localStorage.getItem('promToken');
+        loadProducts(promToken, lastGroupId, false);
     }
 
     // Обробник кліків по групах
-    groupsList.addEventListener('click', async (e) => {
+    groupsList.addEventListener('click', (e) => {
+        // Клік на стрілку — лише згортаємо/розгортаємо
+        const arrow = e.target.closest('.group-arrow');
+        if (arrow) {
+            const toggleId = arrow.dataset.toggleId;
+            const container = groupsList.querySelector(`[data-parent-id="${toggleId}"]`);
+            const collapsedGroups = JSON.parse(localStorage.getItem('collapsedGroups') || '{}');
+
+            if (container.style.display === 'none') {
+                container.style.display = 'block';
+                arrow.textContent = '▼ ';
+                delete collapsedGroups[toggleId];
+            } else {
+                container.style.display = 'none';
+                arrow.textContent = '▶ ';
+                collapsedGroups[toggleId] = true;
+            }
+            localStorage.setItem('collapsedGroups', JSON.stringify(collapsedGroups));
+            return; // не завантажуємо товари
+        }
+
+        // Клік на групу — вибираємо і завантажуємо
         const item = e.target.closest('.group-item');
         if (!item) return;
 
         document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
         item.classList.add('active');
 
-        const promToken = localStorage.getItem('promToken');
         currentGroupId = item.dataset.id;
+        localStorage.setItem('lastGroupId', currentGroupId); // запам’ятовуємо
+
+        const promToken = localStorage.getItem('promToken');
         loadProducts(promToken, currentGroupId, false);
     });
 

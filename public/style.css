@@ -159,6 +159,15 @@ input:focus {
     background-color: var(--secondary);
 }
 
+.group-arrow {
+    display: inline-block;
+    font-size: 0.7em;
+    cursor: pointer;
+    transition: transform 0.2s;
+    user-select: none;
+    color: var(--text-muted);
+}
+
 .controls {
     display: flex;
     justify-content: space-between;
