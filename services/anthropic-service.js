@@ -1,23 +1,23 @@
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Anthropic = require('@anthropic-ai/sdk');
 
-class GeminiService {
+class AnthropicService {
     /**
-     * Ініціалізує клієнт Gemini з переданим ключем
+     * Ініціалізує клієнт Anthropic з переданим ключем
      */
     getClient(apiKey) {
-        if (!apiKey) throw new Error('Gemini API Key is required');
-        return new GoogleGenerativeAI(apiKey);
+        if (!apiKey) throw new Error('Anthropic API Key is required');
+        return new Anthropic({
+            apiKey: apiKey,
+        });
     }
 
     /**
      * Генерує оптимізовану назву товару (до 110 символів)
      */
     async generateTitle(apiKey, productContext) {
-        const genAI = this.getClient(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-
-        const prompt = `
-Ти SEO-спеціаліст маркетплейсу Prom.ua. Твоє завдання - покращити назву товару.
+        const client = this.getClient(apiKey);
+        
+        const prompt = `Ти SEO-спеціаліст маркетплейсу Prom.ua. Твоє завдання - покращити назву товару.
 Правила Prom.ua для назв:
 1. Максимум 110 символів.
 2. Формула: Тип товару + Бренд/Виробник + Модель + Ключові характеристики.
@@ -30,15 +30,18 @@ class GeminiService {
 Опис: ${productContext.description ? productContext.description.substring(0, 300) + '...' : 'Немає'}
 
 Згенеруй ОДНУ ідеальну назву українською мовою. 
-У відповіді поверни ТІЛЬКИ текст назви, без лапок чи пояснень.
-`;
+У відповіді поверни ТІЛЬКИ текст назви, без лапок чи пояснень.`;
 
         try {
-            const result = await model.generateContent(prompt);
-            return result.response.text().trim().replace(/^"|"$/g, '');
+            const msg = await client.messages.create({
+                model: "claude-3-haiku-20240307",
+                max_tokens: 150,
+                messages: [{ role: "user", content: prompt }]
+            });
+            return msg.content[0].text.trim().replace(/^"|"$/g, '');
         } catch (error) {
-            console.error('Gemini generateTitle error:', error);
-            throw new Error('Помилка генерації назви ШІ');
+            console.error('Anthropic generateTitle error:', error);
+            throw new Error('Помилка генерації назви ШІ (Anthropic)');
         }
     }
 
@@ -46,11 +49,9 @@ class GeminiService {
      * Генерує пошукові ключові слова (до 1024 символів, через кому)
      */
     async generateKeywords(apiKey, productContext) {
-        const genAI = this.getClient(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+        const client = this.getClient(apiKey);
 
-        const prompt = `
-Ти SEO-спеціаліст. Згенеруй пошукові запити (keywords) для товару на маркетплейсі.
+        const prompt = `Ти SEO-спеціаліст. Згенеруй пошукові запити (keywords) для товару на маркетплейсі.
 Правила:
 1. Ключові слова мають бути розділені комою та пробілом (, ).
 2. Від 10 до 20 найрелевантніших запитів.
@@ -60,15 +61,18 @@ class GeminiService {
 Товар: ${productContext.name}
 Категорія: ${productContext.group || 'Не вказано'}
 
-Поверни ТІЛЬКИ рядок з ключовими словами, без пояснень.
-`;
+Поверни ТІЛЬКИ рядок з ключовими словами, без пояснень.`;
 
         try {
-            const result = await model.generateContent(prompt);
-            return result.response.text().trim();
+            const msg = await client.messages.create({
+                model: "claude-3-haiku-20240307",
+                max_tokens: 300,
+                messages: [{ role: "user", content: prompt }]
+            });
+            return msg.content[0].text.trim();
         } catch (error) {
-            console.error('Gemini generateKeywords error:', error);
-            throw new Error('Помилка генерації ключових слів ШІ');
+            console.error('Anthropic generateKeywords error:', error);
+            throw new Error('Помилка генерації ключових слів ШІ (Anthropic)');
         }
     }
 
@@ -76,11 +80,9 @@ class GeminiService {
      * Генерує повноцінний HTML опис товару
      */
     async generateDescription(apiKey, productContext) {
-        const genAI = this.getClient(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-pro-latest" }); // Використовуємо PRO для більших текстів
+        const client = this.getClient(apiKey);
 
-        const prompt = `
-Ти професійний копірайтер для e-commerce. Напиши продаючий опис для товару на Prom.ua.
+        const prompt = `Ти професійний копірайтер для e-commerce. Напиши продаючий опис для товару на Prom.ua.
 Вимоги:
 1. Мова: українська.
 2. Формат: HTML (використовуй <h3>, <ul>, <li>, <strong>, <p>). Не використовуй теги <html> чи <body>.
@@ -95,22 +97,28 @@ class GeminiService {
 Ціна: ${productContext.price} ${productContext.currency}
 Поточний опис (якщо є): ${productContext.description || 'Немає'}
 
-Поверни ТІЛЬКИ HTML-код опису.
-`;
+Поверни ТІЛЬКИ HTML-код опису.`;
 
         try {
-            const result = await model.generateContent(prompt);
-            let html = result.response.text().trim();
-            // Очищення від маркдауну, якщо ШІ його додасть
+            const msg = await client.messages.create({
+                model: "claude-3-5-sonnet-20240620",
+                max_tokens: 2000,
+                messages: [{ role: "user", content: prompt }]
+            });
+            
+            let html = msg.content[0].text.trim();
+            // Очищення від маркдауну
             if (html.startsWith('\`\`\`html')) {
                 html = html.replace(/^\`\`\`html/, '').replace(/\`\`\`$/, '');
+            } else if (html.startsWith('\`\`\`')) {
+                html = html.replace(/^\`\`\`/, '').replace(/\`\`\`$/, '');
             }
             return html.trim();
         } catch (error) {
-            console.error('Gemini generateDescription error:', error);
-            throw new Error('Помилка генерації опису ШІ');
+            console.error('Anthropic generateDescription error:', error);
+            throw new Error('Помилка генерації опису ШІ (Anthropic)');
         }
     }
 }
 
-module.exports = new GeminiService();
+module.exports = new AnthropicService();

@@ -9,7 +9,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const connectBtn = document.getElementById('connect-btn');
     const disconnectBtn = document.getElementById('disconnect-btn');
     const promTokenInput = document.getElementById('prom-token');
-    const geminiTokenInput = document.getElementById('gemini-token');
+    const anthropicTokenInput = document.getElementById('anthropic-token');
     const errorMsg = document.getElementById('auth-error');
 
     const groupsList = document.getElementById('groups-list');
@@ -25,19 +25,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Завантаження збережених токенів
     const savedProm = localStorage.getItem('promToken');
-    const savedGemini = localStorage.getItem('geminiToken');
+    const savedAnthropic = localStorage.getItem('anthropicToken');
     if (savedProm) promTokenInput.value = savedProm;
-    if (savedGemini) geminiTokenInput.value = savedGemini;
+    if (savedAnthropic) anthropicTokenInput.value = savedAnthropic;
 
-    if (savedProm && savedGemini) {
-        connectToApi(savedProm, savedGemini);
+    if (savedProm && savedAnthropic) {
+        connectToApi(savedProm, savedAnthropic);
     }
 
     connectBtn.addEventListener('click', () => {
         const promToken = promTokenInput.value.trim();
-        const geminiToken = geminiTokenInput.value.trim();
+        const anthropicToken = anthropicTokenInput.value.trim();
 
-        if (!promToken || !geminiToken) {
+        if (!promToken || !anthropicToken) {
             showError('Будь ласка, введіть обидва токени.');
             return;
         }
@@ -46,17 +46,17 @@ document.addEventListener('DOMContentLoaded', () => {
         connectBtn.textContent = 'Підключення...';
         errorMsg.style.display = 'none';
 
-        connectToApi(promToken, geminiToken);
+        connectToApi(promToken, anthropicToken);
     });
 
     disconnectBtn.addEventListener('click', () => {
         localStorage.removeItem('promToken');
-        localStorage.removeItem('geminiToken');
+        localStorage.removeItem('anthropicToken');
         catalogSection.style.display = 'none';
         headerActions.style.display = 'none';
         authSection.style.display = 'block';
         promTokenInput.value = '';
-        geminiTokenInput.value = '';
+        anthropicTokenInput.value = '';
     });
 
     function showError(msg) {
@@ -66,7 +66,7 @@ document.addEventListener('DOMContentLoaded', () => {
         connectBtn.textContent = 'Підключитися та завантажити товари';
     }
 
-    async function connectToApi(promToken, geminiToken) {
+    async function connectToApi(promToken, anthropicToken) {
         try {
             const response = await fetch(`${API_BASE}/groups`, {
                 headers: { 'x-prom-token': promToken }
@@ -80,7 +80,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await response.json();
             
             localStorage.setItem('promToken', promToken);
-            localStorage.setItem('geminiToken', geminiToken);
+            localStorage.setItem('anthropicToken', anthropicToken);
             
             authSection.style.display = 'none';
             headerActions.style.display = 'block';
@@ -205,12 +205,12 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.disabled = true;
 
             try {
-                const geminiToken = localStorage.getItem('geminiToken');
+                const anthropicToken = localStorage.getItem('anthropicToken');
                 const response = await fetch(`${API_BASE}/generate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'x-gemini-token': geminiToken
+                        'x-anthropic-token': anthropicToken
                     },
                     body: JSON.stringify({
                         product: currentEditingProduct,

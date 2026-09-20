@@ -3,7 +3,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const promApi = require('./services/prom-api');
-const geminiService = require('./services/gemini-service');
+const anthropicService = require('./services/anthropic-service');
 
 dotenv.config();
 
@@ -62,19 +62,19 @@ app.get('/api/products/:id', async (req, res) => {
 // 4. Згенерувати контент (ШІ)
 app.post('/api/generate', async (req, res) => {
     try {
-        const geminiToken = req.headers['x-gemini-token'];
-        if (!geminiToken) return res.status(401).json({ error: 'Gemini токен не надано' });
+        const anthropicToken = req.headers['x-anthropic-token'];
+        if (!anthropicToken) return res.status(401).json({ error: 'Anthropic токен не надано' });
 
         const { product, type } = req.body;
         // type може бути: 'title', 'keywords', 'description'
         
         let result = '';
         if (type === 'title') {
-            result = await geminiService.generateTitle(geminiToken, product);
+            result = await anthropicService.generateTitle(anthropicToken, product);
         } else if (type === 'keywords') {
-            result = await geminiService.generateKeywords(geminiToken, product);
+            result = await anthropicService.generateKeywords(anthropicToken, product);
         } else if (type === 'description') {
-            result = await geminiService.generateDescription(geminiToken, product);
+            result = await anthropicService.generateDescription(anthropicToken, product);
         } else {
             return res.status(400).json({ error: 'Невідомий тип генерації' });
         }
