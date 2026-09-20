@@ -250,8 +250,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const updatedProduct = {
                 id: currentEditingProduct.id,
                 name: document.getElementById('ai-name').value.trim(),
+                name_uk: document.getElementById('ai-name').value.trim(),
                 keywords: document.getElementById('ai-keywords').value.trim(),
+                keywords_uk: document.getElementById('ai-keywords').value.trim(),
                 description: document.getElementById('ai-desc').value.trim(),
+                description_uk: document.getElementById('ai-desc').value.trim(),
             };
 
             const response = await fetch(`${API_BASE}/save`, {
