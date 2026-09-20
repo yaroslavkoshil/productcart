@@ -14,7 +14,7 @@ class GeminiService {
      */
     async generateTitle(apiKey, productContext) {
         const genAI = this.getClient(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         const prompt = `
 Ти SEO-спеціаліст маркетплейсу Prom.ua. Твоє завдання - покращити назву товару.
@@ -47,7 +47,7 @@ class GeminiService {
      */
     async generateKeywords(apiKey, productContext) {
         const genAI = this.getClient(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
 
         const prompt = `
 Ти SEO-спеціаліст. Згенеруй пошукові запити (keywords) для товару на маркетплейсі.
@@ -77,7 +77,7 @@ class GeminiService {
      */
     async generateDescription(apiKey, productContext) {
         const genAI = this.getClient(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro-latest" }); // Використовуємо PRO для більших текстів
+        const model = genAI.getGenerativeModel({ model: "gemini-pro-latest" }); // Використовуємо PRO для більших текстів
 
         const prompt = `
 Ти професійний копірайтер для e-commerce. Напиши продаючий опис для товару на Prom.ua.
