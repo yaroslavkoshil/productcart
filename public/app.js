@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const groupsList = document.getElementById('groups-list');
     const productsGrid = document.getElementById('products-grid');
     const productsCount = document.getElementById('products-count');
+    const searchInput = document.getElementById('search-input');
 
     // Модальне вікно
     const modal = document.getElementById('product-modal');
@@ -129,8 +130,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const response = await fetch(url, { headers: { 'x-prom-token': promToken } });
             const data = await response.json();
             currentProducts = data.products || [];
-            productsCount.textContent = currentProducts.length;
             
+            searchInput.value = ''; // Очищаємо пошук при зміні категорії
             renderProducts(currentProducts);
         } catch (error) {
             productsGrid.innerHTML = `<div class="error-msg">Помилка: ${error.message}</div>`;
@@ -138,6 +139,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderProducts(products) {
+        productsCount.textContent = products ? products.length : 0;
+        
         if (!products || products.length === 0) {
             productsGrid.innerHTML = '<div class="loading">Товарів не знайдено</div>';
             return;
@@ -168,6 +171,23 @@ document.addEventListener('DOMContentLoaded', () => {
             productsGrid.appendChild(card);
         });
     }
+
+    // Пошук товарів
+    searchInput.addEventListener('input', (e) => {
+        const query = e.target.value.toLowerCase().trim();
+        if (!query) {
+            renderProducts(currentProducts);
+            return;
+        }
+        
+        const filtered = currentProducts.filter(p => {
+            const name = (p.name_uk || p.name || '').toLowerCase();
+            const id = (p.id || '').toString().toLowerCase();
+            return name.includes(query) || id.includes(query);
+        });
+        
+        renderProducts(filtered);
+    });
 
     // --- ЛОГІКА МОДАЛЬНОГО ВІКНА ТА ШІ ---
 
