@@ -54,13 +54,29 @@ class PromApiService {
     }
 
     /**
-     * Отримує список груп (категорій)
+     * Отримує список груп (категорій) - всі сторінки автоматично
      */
     async getGroups(token) {
         try {
             const client = this.getClient(token);
-            const response = await client.get('/groups/list');
-            return response.data;
+            let allGroups = [];
+            let lastId = null;
+            const limit = 100;
+
+            // Пагінуємо доки не отримаємо всі групи
+            while (true) {
+                let url = `/groups/list?limit=${limit}`;
+                if (lastId) url += `&last_id=${lastId}`;
+
+                const response = await client.get(url);
+                const groups = response.data.groups || [];
+                allGroups = allGroups.concat(groups);
+
+                if (groups.length < limit) break; // дійшли до кінця
+                lastId = groups[groups.length - 1].id;
+            }
+
+            return { groups: allGroups };
         } catch (error) {
             console.error('Prom API getGroups error:', error.response?.data || error.message);
             throw new Error(error.response?.data?.message || 'Помилка при отриманні груп');

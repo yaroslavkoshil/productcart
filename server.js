@@ -24,16 +24,8 @@ app.get('/api/groups', async (req, res) => {
 
         const data = await promApi.getGroups(token);
         const groups = data.groups || [];
-        console.log(`\n=== DEBUG GROUPS ===\nTotal groups: ${groups.length}`);
-        if (groups.length > 0) {
-            console.log("Sample group 1:", JSON.stringify(groups[0], null, 2));
-            
-            // Знайдемо групу "Все для красоты"
-            const krasota = groups.find(g => g.name && g.name.toLowerCase().includes('красоты'));
-            if (krasota) {
-                console.log("Found krasota group:", JSON.stringify(krasota, null, 2));
-            }
-        }
+        console.log(`\n=== ALL GROUPS (${groups.length}) ===`);
+        groups.forEach(g => console.log(`id:${g.id} parent:${g.parent_group_id} name:${g.name}`));
         console.log(`=========================\n`);
         res.json(data);
     } catch (error) {
