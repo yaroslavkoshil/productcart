@@ -103,7 +103,7 @@ class GeminiService {
             let html = result.response.text().trim();
             // Очищення від маркдауну, якщо ШІ його додасть
             if (html.startsWith('\`\`\`html')) {
-                html = html.replace(/^\`\`\`html/, '').replace/\`\`\`$/, '');
+                html = html.replace(/^\`\`\`html/, '').replace(/\`\`\`$/, '');
             }
             return html.trim();
         } catch (error) {
