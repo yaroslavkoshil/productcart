@@ -132,7 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         allDiv.style.fontWeight = '500';
         groupsList.appendChild(allDiv);
 
-        function renderNode(node, level = 0) {
+        function renderNode(node, level = 0, container = groupsList) {
             const hasChildren = node.children && node.children.length > 0;
             const isCollapsed = collapsedGroups[node.id] === true;
 
@@ -141,45 +141,45 @@ document.addEventListener('DOMContentLoaded', () => {
             div.dataset.id = node.id;
             div.style.paddingLeft = `${14 + level * 18}px`;
 
-            if (level === 0) {
-                div.style.fontWeight = '500';
-                if (hasChildren) {
-                    // Стрілка для згортання
-                    const arrow = document.createElement('span');
-                    arrow.className = 'group-arrow';
-                    arrow.textContent = isCollapsed ? '▶ ' : '▼ ';
-                    arrow.dataset.toggleId = node.id;
-                    div.appendChild(arrow);
-                    div.appendChild(document.createTextNode(node.name));
-                } else {
-                    div.textContent = node.name;
-                }
+            if (hasChildren) {
+                // Стрілка для згортання
+                const arrow = document.createElement('span');
+                arrow.className = 'group-arrow';
+                arrow.textContent = isCollapsed ? '▶ ' : '▼ ';
+                arrow.dataset.toggleId = node.id;
+                div.appendChild(arrow);
+                
+                const textSpan = document.createElement('span');
+                textSpan.textContent = level === 0 ? node.name : ' └ ' + node.name;
+                if (level === 0) textSpan.style.fontWeight = '500';
+                else textSpan.style.fontSize = '0.9em';
+                
+                div.appendChild(textSpan);
             } else {
-                div.style.fontSize = '0.88em';
-                div.textContent = '└ ' + node.name;
+                if (level === 0) {
+                    div.style.fontWeight = '500';
+                    div.textContent = node.name;
+                } else {
+                    div.style.fontSize = '0.9em';
+                    div.textContent = '└ ' + node.name;
+                }
             }
 
-            groupsList.appendChild(div);
+            container.appendChild(div);
 
             if (hasChildren) {
                 const childrenContainer = document.createElement('div');
                 childrenContainer.dataset.parentId = node.id;
                 childrenContainer.style.display = isCollapsed ? 'none' : 'block';
-                node.children.forEach(child => {
-                    // Рендеримо дітей у контейнер
-                    const childDiv = document.createElement('div');
-                    childDiv.className = 'group-item' + (String(child.id) === String(lastGroupId) ? ' active' : '');
-                    childDiv.dataset.id = child.id;
-                    childDiv.style.paddingLeft = `${14 + (level + 1) * 18}px`;
-                    childDiv.style.fontSize = '0.88em';
-                    childDiv.textContent = '└ ' + child.name;
-                    childrenContainer.appendChild(childDiv);
-                });
-                groupsList.appendChild(childrenContainer);
+                
+                // РЕКУРСІЯ: рендеримо дітей всередину цього контейнера
+                node.children.forEach(child => renderNode(child, level + 1, childrenContainer));
+                
+                container.appendChild(childrenContainer);
             }
         }
 
-        rootGroups.forEach(g => renderNode(g, 0));
+        rootGroups.forEach(g => renderNode(g, 0, groupsList));
 
         // Відновлюємо останню вибрану групу і завантажуємо товари
         currentGroupId = lastGroupId;
