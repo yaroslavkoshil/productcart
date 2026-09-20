@@ -174,7 +174,7 @@ input:focus {
 /* Products Grid */
 .products-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 1.5rem;
 }
 

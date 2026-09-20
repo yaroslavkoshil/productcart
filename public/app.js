@@ -21,8 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const modal = document.getElementById('product-modal');
     const closeModal = document.querySelector('.close-modal');
     let currentEditingProduct = null;
-
     let currentProducts = [];
+    let lastProductId = null;
+    let currentGroupId = 'all';
 
     // Завантаження збережених токенів
     const savedProm = localStorage.getItem('promToken');
@@ -159,25 +160,65 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Завантажуємо товари для вибраної групи
         const promToken = localStorage.getItem('promToken');
-        loadProducts(promToken, item.dataset.id);
+        currentGroupId = item.dataset.id;
+        loadProducts(promToken, currentGroupId, false);
     });
 
-    async function loadProducts(promToken, groupId = null) {
-        productsGrid.innerHTML = '<div class="loading">Завантаження товарів...</div>';
+    async function loadProducts(promToken, groupId = null, append = false) {
+        if (!append) {
+            productsGrid.innerHTML = '<div class="loading">Завантаження товарів...</div>';
+            currentProducts = [];
+            lastProductId = null;
+        }
+
         try {
             let url = `${API_BASE}/products?limit=50`;
             if (groupId && groupId !== 'all') url += `&group_id=${groupId}`;
+            if (lastProductId) url += `&last_id=${lastProductId}`;
 
             const response = await fetch(url, { headers: { 'x-prom-token': promToken } });
             const data = await response.json();
-            currentProducts = data.products || [];
+            
+            const newProducts = data.products || [];
+            
+            if (append) {
+                currentProducts = [...currentProducts, ...newProducts];
+            } else {
+                currentProducts = newProducts;
+            }
+            
+            if (newProducts.length > 0) {
+                lastProductId = newProducts[newProducts.length - 1].id;
+            }
             
             searchInput.value = ''; // Очищаємо пошук при зміні категорії
             renderProducts(currentProducts);
+            
+            const loadMoreBtn = document.getElementById('load-more-btn');
+            if (newProducts.length === 50) {
+                loadMoreBtn.style.display = 'inline-block';
+            } else {
+                loadMoreBtn.style.display = 'none';
+            }
         } catch (error) {
-            productsGrid.innerHTML = `<div class="error-msg">Помилка: ${error.message}</div>`;
+            if (!append) {
+                productsGrid.innerHTML = `<div class="error-msg">Помилка: ${error.message}</div>`;
+            } else {
+                alert('Помилка при завантаженні: ' + error.message);
+            }
         }
     }
+
+    document.getElementById('load-more-btn').addEventListener('click', (e) => {
+        const btn = e.target;
+        btn.textContent = 'Завантаження...';
+        btn.disabled = true;
+        
+        loadProducts(localStorage.getItem('promToken'), currentGroupId, true).finally(() => {
+            btn.textContent = 'Завантажити ще 50 товарів';
+            btn.disabled = false;
+        });
+    });
 
     function renderProducts(products) {
         productsCount.textContent = products ? products.length : 0;
