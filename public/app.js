@@ -246,14 +246,13 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const promToken = localStorage.getItem('promToken');
             
-            // Збираємо оновлені дані з полів вводу
             const updatedProduct = {
                 id: currentEditingProduct.id,
-                name: document.getElementById('ai-name').value.trim(),
+                name: currentEditingProduct.name,
                 name_uk: document.getElementById('ai-name').value.trim(),
-                keywords: document.getElementById('ai-keywords').value.trim(),
+                keywords: currentEditingProduct.keywords,
                 keywords_uk: document.getElementById('ai-keywords').value.trim(),
-                description: document.getElementById('ai-desc').value.trim(),
+                description: currentEditingProduct.description,
                 description_uk: document.getElementById('ai-desc').value.trim(),
             };
 
