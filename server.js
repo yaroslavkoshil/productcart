@@ -53,6 +53,7 @@ app.get('/api/products/:id', async (req, res) => {
         if (!token) return res.status(401).json({ error: 'Токен не надано' });
 
         const data = await promApi.getProduct(token, req.params.id);
+        console.log(`\n=== DEBUG PRODUCT ${req.params.id} ===\n`, JSON.stringify(data, null, 2), `\n=========================\n`);
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });

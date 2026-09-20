@@ -213,8 +213,8 @@ document.addEventListener('DOMContentLoaded', () => {
         currentEditingProduct = product;
         
         // Беремо українську версію, якщо є, інакше російську (дефолтну)
-        const currentName = product.name_uk || product.name || '';
-        const currentDesc = product.description_uk || product.description || '';
+        const currentName = (product.name_multilang && product.name_multilang.uk) ? product.name_multilang.uk : product.name || '';
+        const currentDesc = (product.description_multilang && product.description_multilang.uk) ? product.description_multilang.uk : product.description || '';
         const currentKeywords = product.keywords_uk || product.keywords || '';
         
         document.getElementById('modal-title').textContent = `Редагування: ${currentName}`;
@@ -292,11 +292,16 @@ document.addEventListener('DOMContentLoaded', () => {
             const updatedProduct = {
                 id: currentEditingProduct.id,
                 name: currentEditingProduct.name,
-                name_uk: document.getElementById('ai-name').value.trim(),
                 keywords: currentEditingProduct.keywords,
-                keywords_uk: document.getElementById('ai-keywords').value.trim(),
                 description: currentEditingProduct.description,
-                description_uk: document.getElementById('ai-desc').value.trim(),
+                name_multilang: {
+                    ru: currentEditingProduct.name,
+                    uk: document.getElementById('ai-name').value.trim()
+                },
+                description_multilang: {
+                    ru: currentEditingProduct.description,
+                    uk: document.getElementById('ai-desc').value.trim()
+                }
             };
 
             const response = await fetch(`${API_BASE}/save`, {
