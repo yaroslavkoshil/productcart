@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PromAI Filler</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="modal.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -25,22 +26,19 @@
                 <h2>Підключення</h2>
                 <div class="form-group">
                     <label for="prom-token">Prom.ua API Token</label>
-                    <input type="password" id="prom-token" placeholder="Введіть ваш Prom API токен (Bearer ...)">
-                    <small class="help-text">Знаходиться в кабінеті Prom: Налаштування -> Управління API-токенами</small>
+                    <input type="password" id="prom-token" placeholder="Введіть ваш Prom API токен">
                 </div>
                 <div class="form-group">
                     <label for="gemini-token">Google Gemini API Key</label>
                     <input type="password" id="gemini-token" placeholder="Введіть ваш Gemini API ключ">
-                    <small class="help-text">Можна отримати безкоштовно в Google AI Studio</small>
                 </div>
                 <button id="connect-btn" class="btn primary">Підключитися та завантажити товари</button>
                 <div id="auth-error" class="error-msg" style="display: none;"></div>
             </section>
 
-            <!-- Секція каталогу (прихована за замовчуванням) -->
+            <!-- Секція каталогу -->
             <section id="catalog-section" class="catalog-section" style="display: none;">
                 <div class="layout">
-                    <!-- Ліва панель: Групи -->
                     <aside class="sidebar card">
                         <h3>Групи товарів</h3>
                         <div id="groups-list" class="groups-list">
@@ -48,7 +46,6 @@
                         </div>
                     </aside>
 
-                    <!-- Права панель: Товари -->
                     <div class="main-content">
                         <div class="controls card">
                             <input type="text" id="search-input" placeholder="Пошук товарів...">
@@ -65,6 +62,70 @@
             </section>
         </main>
     </div>
+
+    <!-- Модальне вікно редагування товару -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content card">
+            <div class="modal-header">
+                <h2 id="modal-title">Редагування товару</h2>
+                <span class="close-modal">&times;</span>
+            </div>
+            <div class="modal-body layout-2col">
+                <div class="col-left">
+                    <img id="modal-img" src="" alt="Product">
+                    
+                    <div class="current-data">
+                        <h3>Поточні дані (на Prom):</h3>
+                        <div class="data-group">
+                            <label>Назва:</label>
+                            <div id="current-name" class="read-only-box"></div>
+                        </div>
+                        <div class="data-group">
+                            <label>Ключові слова:</label>
+                            <div id="current-keywords" class="read-only-box"></div>
+                        </div>
+                        <div class="data-group">
+                            <label>Опис:</label>
+                            <div id="current-desc" class="read-only-box desc-box"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-right">
+                    <h3>Згенеровано ШІ:</h3>
+                    
+                    <div class="data-group">
+                        <div class="label-with-action">
+                            <label>Нова Назва (до 110 симв.):</label>
+                            <button class="btn secondary small gen-btn" data-type="title">✨ Згенерувати</button>
+                        </div>
+                        <input type="text" id="ai-name" class="edit-input" maxlength="110">
+                    </div>
+
+                    <div class="data-group">
+                        <div class="label-with-action">
+                            <label>Нові Ключові слова:</label>
+                            <button class="btn secondary small gen-btn" data-type="keywords">✨ Згенерувати</button>
+                        </div>
+                        <textarea id="ai-keywords" class="edit-input" rows="3"></textarea>
+                    </div>
+
+                    <div class="data-group">
+                        <div class="label-with-action">
+                            <label>Новий HTML Опис:</label>
+                            <button class="btn secondary small gen-btn" data-type="description">✨ Згенерувати</button>
+                        </div>
+                        <textarea id="ai-desc" class="edit-input desc-input" rows="10"></textarea>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <div id="save-status" class="status-msg"></div>
+                <button id="save-btn" class="btn primary">💾 Зберегти на Prom.ua</button>
+            </div>
+        </div>
+    </div>
+
     <script src="app.js"></script>
 </body>
 </html>

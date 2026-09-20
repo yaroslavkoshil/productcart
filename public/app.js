@@ -16,6 +16,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const productsGrid = document.getElementById('products-grid');
     const productsCount = document.getElementById('products-count');
 
+    // Модальне вікно
+    const modal = document.getElementById('product-modal');
+    const closeModal = document.querySelector('.close-modal');
+    let currentEditingProduct = null;
+
     let currentProducts = [];
 
     // Завантаження збережених токенів
@@ -24,12 +29,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (savedProm) promTokenInput.value = savedProm;
     if (savedGemini) geminiTokenInput.value = savedGemini;
 
-    // Автоматичне підключення, якщо є токени
     if (savedProm && savedGemini) {
         connectToApi(savedProm, savedGemini);
     }
 
-    // Обробники кнопок
     connectBtn.addEventListener('click', () => {
         const promToken = promTokenInput.value.trim();
         const geminiToken = geminiTokenInput.value.trim();
@@ -63,10 +66,8 @@ document.addEventListener('DOMContentLoaded', () => {
         connectBtn.textContent = 'Підключитися та завантажити товари';
     }
 
-    // Головна функція підключення та завантаження
     async function connectToApi(promToken, geminiToken) {
         try {
-            // Тестовий запит на отримання груп, щоб перевірити токен
             const response = await fetch(`${API_BASE}/groups`, {
                 headers: { 'x-prom-token': promToken }
             });
@@ -78,7 +79,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const data = await response.json();
             
-            // Якщо все ок - зберігаємо токени і показуємо каталог
             localStorage.setItem('promToken', promToken);
             localStorage.setItem('geminiToken', geminiToken);
             
@@ -87,23 +87,15 @@ document.addEventListener('DOMContentLoaded', () => {
             catalogSection.style.display = 'block';
             
             renderGroups(data.groups);
-            
-            // Завантажуємо перші 50 товарів
             loadProducts(promToken);
-
         } catch (error) {
             showError(error.message);
         }
     }
 
     function renderGroups(groups) {
-        if (!groups || groups.length === 0) {
-            groupsList.innerHTML = '<div class="loading">Немає груп</div>';
-            return;
-        }
-
+        if (!groups || groups.length === 0) return;
         groupsList.innerHTML = '<div class="group-item active" data-id="all">Усі товари</div>';
-        
         groups.forEach(group => {
             const div = document.createElement('div');
             div.className = 'group-item';
@@ -115,23 +107,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function loadProducts(promToken, groupId = null) {
         productsGrid.innerHTML = '<div class="loading">Завантаження товарів...</div>';
-        
         try {
             let url = `${API_BASE}/products?limit=50`;
-            if (groupId && groupId !== 'all') {
-                url += `&group_id=${groupId}`;
-            }
+            if (groupId && groupId !== 'all') url += `&group_id=${groupId}`;
 
-            const response = await fetch(url, {
-                headers: { 'x-prom-token': promToken }
-            });
-
+            const response = await fetch(url, { headers: { 'x-prom-token': promToken } });
             const data = await response.json();
             currentProducts = data.products || [];
             productsCount.textContent = currentProducts.length;
             
             renderProducts(currentProducts);
-            
         } catch (error) {
             productsGrid.innerHTML = `<div class="error-msg">Помилка: ${error.message}</div>`;
         }
@@ -159,18 +144,132 @@ document.addEventListener('DOMContentLoaded', () => {
                     <div class="product-price">${price}</div>
                     <div class="product-meta">
                         <span>ID: ${p.id}</span>
-                        <span style="color: ${p.status === 'on_display' ? 'var(--primary)' : 'var(--text-muted)'}">
-                            ${p.status}
-                        </span>
+                        <span style="color: ${p.status === 'on_display' ? 'var(--primary)' : 'var(--text-muted)'}">${p.status}</span>
                     </div>
                 </div>
             `;
             
-            card.addEventListener('click', () => {
-                alert(`Відкрито товар: ${p.name}\n(Тут буде модальне вікно для генерації ШІ)`);
-            });
-            
+            card.addEventListener('click', () => openModal(p));
             productsGrid.appendChild(card);
         });
     }
+
+    // --- ЛОГІКА МОДАЛЬНОГО ВІКНА ТА ШІ ---
+
+    function openModal(product) {
+        currentEditingProduct = product;
+        
+        document.getElementById('modal-title').textContent = `Редагування: ${product.name}`;
+        document.getElementById('modal-img').src = product.main_image || 'https://via.placeholder.com/250';
+        
+        document.getElementById('current-name').textContent = product.name || 'Немає';
+        document.getElementById('current-keywords').textContent = product.keywords || 'Немає';
+        document.getElementById('current-desc').innerHTML = product.description || 'Немає';
+
+        // Очищаємо поля для нових значень
+        document.getElementById('ai-name').value = product.name || '';
+        document.getElementById('ai-keywords').value = product.keywords || '';
+        document.getElementById('ai-desc').value = product.description || '';
+        
+        document.getElementById('save-status').textContent = '';
+        document.getElementById('save-status').className = 'status-msg';
+
+        modal.style.display = 'block';
+    }
+
+    closeModal.onclick = () => modal.style.display = 'none';
+    window.onclick = (e) => { if (e.target == modal) modal.style.display = 'none'; }
+
+    // Кнопки генерації
+    document.querySelectorAll('.gen-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const type = e.target.dataset.type;
+            const originalText = e.target.textContent;
+            
+            e.target.textContent = '⏳ Генерую...';
+            e.target.disabled = true;
+
+            try {
+                const geminiToken = localStorage.getItem('geminiToken');
+                const response = await fetch(`${API_BASE}/generate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-gemini-token': geminiToken
+                    },
+                    body: JSON.stringify({
+                        product: currentEditingProduct,
+                        type: type
+                    })
+                });
+
+                if (!response.ok) throw new Error('Помилка ШІ');
+                const data = await response.json();
+
+                if (type === 'title') document.getElementById('ai-name').value = data.result;
+                if (type === 'keywords') document.getElementById('ai-keywords').value = data.result;
+                if (type === 'description') document.getElementById('ai-desc').value = data.result;
+
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                e.target.textContent = originalText;
+                e.target.disabled = false;
+            }
+        });
+    });
+
+    // Кнопка збереження на Prom.ua
+    document.getElementById('save-btn').addEventListener('click', async (e) => {
+        const btn = e.target;
+        const statusMsg = document.getElementById('save-status');
+        
+        btn.disabled = true;
+        btn.textContent = '💾 Зберігаю...';
+        statusMsg.textContent = '';
+
+        try {
+            const promToken = localStorage.getItem('promToken');
+            
+            // Збираємо оновлені дані з полів вводу
+            const updatedProduct = {
+                id: currentEditingProduct.id,
+                name: document.getElementById('ai-name').value.trim(),
+                keywords: document.getElementById('ai-keywords').value.trim(),
+                description: document.getElementById('ai-desc').value.trim(),
+            };
+
+            const response = await fetch(`${API_BASE}/save`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-prom-token': promToken
+                },
+                body: JSON.stringify(updatedProduct)
+            });
+
+            if (!response.ok) {
+                const err = await response.json();
+                throw new Error(err.error || 'Помилка при збереженні');
+            }
+
+            statusMsg.textContent = '✅ Успішно збережено на Prom.ua!';
+            statusMsg.className = 'status-msg success';
+            
+            // Оновлюємо дані в локальному стейті
+            currentEditingProduct.name = updatedProduct.name;
+            currentEditingProduct.keywords = updatedProduct.keywords;
+            currentEditingProduct.description = updatedProduct.description;
+
+            // Перемальовуємо каталог, щоб побачити нову назву
+            renderProducts(currentProducts);
+
+        } catch (error) {
+            statusMsg.textContent = `❌ ${error.message}`;
+            statusMsg.className = 'status-msg error';
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '💾 Зберегти на Prom.ua';
+        }
+    });
 });
