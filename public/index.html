@@ -10,22 +10,58 @@
 <body>
     <div class="container">
         <header>
-            <h1>PromAI Filler</h1>
-            <p>Автоматичне наповнення карток товарів Prom.ua за допомогою ШІ</p>
+            <div class="header-content">
+                <h1>PromAI Filler</h1>
+                <p>Автоматичне наповнення карток товарів Prom.ua за допомогою ШІ</p>
+            </div>
+            <div class="header-actions" id="header-actions" style="display: none;">
+                <button id="disconnect-btn" class="btn secondary">Відключитись</button>
+            </div>
         </header>
 
         <main id="app">
-            <section class="auth-section card">
+            <!-- Секція підключення -->
+            <section id="auth-section" class="card auth-section">
                 <h2>Підключення</h2>
                 <div class="form-group">
                     <label for="prom-token">Prom.ua API Token</label>
-                    <input type="password" id="prom-token" placeholder="Введіть ваш Prom API токен">
+                    <input type="password" id="prom-token" placeholder="Введіть ваш Prom API токен (Bearer ...)">
+                    <small class="help-text">Знаходиться в кабінеті Prom: Налаштування -> Управління API-токенами</small>
                 </div>
                 <div class="form-group">
                     <label for="gemini-token">Google Gemini API Key</label>
                     <input type="password" id="gemini-token" placeholder="Введіть ваш Gemini API ключ">
+                    <small class="help-text">Можна отримати безкоштовно в Google AI Studio</small>
                 </div>
                 <button id="connect-btn" class="btn primary">Підключитися та завантажити товари</button>
+                <div id="auth-error" class="error-msg" style="display: none;"></div>
+            </section>
+
+            <!-- Секція каталогу (прихована за замовчуванням) -->
+            <section id="catalog-section" class="catalog-section" style="display: none;">
+                <div class="layout">
+                    <!-- Ліва панель: Групи -->
+                    <aside class="sidebar card">
+                        <h3>Групи товарів</h3>
+                        <div id="groups-list" class="groups-list">
+                            <div class="loading">Завантаження груп...</div>
+                        </div>
+                    </aside>
+
+                    <!-- Права панель: Товари -->
+                    <div class="main-content">
+                        <div class="controls card">
+                            <input type="text" id="search-input" placeholder="Пошук товарів...">
+                            <div class="stats">
+                                Завантажено: <span id="products-count">0</span>
+                            </div>
+                        </div>
+                        
+                        <div id="products-grid" class="products-grid">
+                            <div class="loading">Завантаження товарів...</div>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
