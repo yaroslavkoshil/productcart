@@ -171,20 +171,43 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ЛОГІКА МОДАЛЬНОГО ВІКНА ТА ШІ ---
 
-    function openModal(product) {
+    async function openModal(summaryProduct) {
+        // Показуємо лоадер або просто блокуємо клік поки вантажиться
+        document.getElementById('modal-title').textContent = `Завантаження...`;
+        modal.style.display = 'block';
+
+        let product;
+        try {
+            const promToken = localStorage.getItem('promToken');
+            const response = await fetch(`${API_BASE}/products/${summaryProduct.id}`, {
+                headers: { 'x-prom-token': promToken }
+            });
+            if (!response.ok) throw new Error('Не вдалося завантажити деталі товару');
+            product = await response.json();
+        } catch (e) {
+            alert(e.message);
+            modal.style.display = 'none';
+            return;
+        }
+
         currentEditingProduct = product;
         
-        document.getElementById('modal-title').textContent = `Редагування: ${product.name}`;
-        document.getElementById('modal-img').src = product.main_image || 'https://via.placeholder.com/250';
+        // Беремо українську версію, якщо є, інакше російську (дефолтну)
+        const currentName = product.name_uk || product.name || '';
+        const currentDesc = product.description_uk || product.description || '';
+        const currentKeywords = product.keywords_uk || product.keywords || '';
         
-        document.getElementById('current-name').textContent = product.name || 'Немає';
-        document.getElementById('current-keywords').textContent = product.keywords || 'Немає';
-        document.getElementById('current-desc').innerHTML = product.description || 'Немає';
+        document.getElementById('modal-title').textContent = `Редагування: ${currentName}`;
+        document.getElementById('modal-img').src = product.main_image || summaryProduct.main_image || 'https://via.placeholder.com/250';
+        
+        document.getElementById('current-name').textContent = currentName || 'Немає';
+        document.getElementById('current-keywords').textContent = currentKeywords || 'Немає';
+        document.getElementById('current-desc').innerHTML = currentDesc || 'Немає';
 
         // Очищаємо поля для нових значень
-        document.getElementById('ai-name').value = product.name || '';
-        document.getElementById('ai-keywords').value = product.keywords || '';
-        document.getElementById('ai-desc').value = product.description || '';
+        document.getElementById('ai-name').value = currentName;
+        document.getElementById('ai-keywords').value = currentKeywords;
+        document.getElementById('ai-desc').value = currentDesc;
         
         document.getElementById('save-status').textContent = '';
         document.getElementById('save-status').className = 'status-msg';
