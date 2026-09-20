@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentProducts = [];
     let lastProductId = null;
     let currentGroupId = 'all';
+    let allGroupsMap = {}; // зберігаємо дерево груп
 
     // Завантаження збережених токенів
     const savedProm = localStorage.getItem('promToken');
@@ -102,11 +103,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const groupsMap = {};
         const rootGroups = [];
 
-        // Ініціалізуємо мапу
+        // Ініціалізуємо мапу і зберігаємо глобально
         groups.forEach(g => {
             g.children = [];
             groupsMap[g.id] = g;
         });
+        allGroupsMap = groupsMap;
 
         // Розподіляємо по батьківських групах
         groups.forEach(g => {
@@ -148,20 +150,72 @@ document.addEventListener('DOMContentLoaded', () => {
         rootGroups.forEach(g => renderNode(g, 0));
     }
 
+    // Повертає масив ID: сам вузол + всі нащадки
+    function getAllDescendantIds(groupId) {
+        const ids = [groupId];
+        const node = allGroupsMap[groupId];
+        if (node && node.children) {
+            node.children.forEach(child => {
+                ids.push(...getAllDescendantIds(child.id));
+            });
+        }
+        return ids;
+    }
+
     // Обробник кліків по групах
-    groupsList.addEventListener('click', (e) => {
+    groupsList.addEventListener('click', async (e) => {
         const item = e.target.closest('.group-item');
         if (!item) return;
 
-        // Знімаємо active з усіх
         document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
-        // Додаємо active на вибраний
         item.classList.add('active');
 
-        // Завантажуємо товари для вибраної групи
         const promToken = localStorage.getItem('promToken');
         currentGroupId = item.dataset.id;
-        loadProducts(promToken, currentGroupId, false);
+
+        if (currentGroupId === 'all') {
+            loadProducts(promToken, 'all', false);
+            return;
+        }
+
+        // Перевіряємо, чи є дочірні категорії
+        const node = allGroupsMap[currentGroupId];
+        const hasChildren = node && node.children && node.children.length > 0;
+
+        if (hasChildren) {
+            // Якщо є діти — збираємо всі дочірні ID і вантажимо з кожного
+            const allIds = getAllDescendantIds(currentGroupId);
+            // Видаляємо саму батьківську (зазвичай порожня), беремо тільки листові
+            const leafIds = allIds.filter(id => {
+                const g = allGroupsMap[id];
+                return !g || !g.children || g.children.length === 0;
+            });
+
+            productsGrid.innerHTML = '<div class="loading">Завантаження товарів з підкатегорій...</div>';
+            currentProducts = [];
+            lastProductId = null;
+            document.getElementById('load-more-btn').style.display = 'none';
+
+            // Паралельне завантаження з усіх листових підкатегорій
+            const promToken2 = localStorage.getItem('promToken');
+            const fetches = leafIds.map(id =>
+                fetch(`${API_BASE}/products?limit=50&group_id=${id}`, {
+                    headers: { 'x-prom-token': promToken2 }
+                }).then(r => r.json()).then(d => d.products || [])
+            );
+
+            try {
+                const results = await Promise.all(fetches);
+                currentProducts = results.flat();
+                searchInput.value = '';
+                renderProducts(currentProducts);
+                document.getElementById('load-more-btn').style.display = 'none';
+            } catch (err) {
+                productsGrid.innerHTML = `<div class="error-msg">Помилка: ${err.message}</div>`;
+            }
+        } else {
+            loadProducts(promToken, currentGroupId, false);
+        }
     });
 
     async function loadProducts(promToken, groupId = null, append = false) {
