@@ -251,7 +251,8 @@ app.post('/api/add-category', async (req, res) => {
             pushCmd = 'git push https://yaroslavkoshil:$GITHUB_TOKEN@github.com/yaroslavkoshil/productcart.git main';
         }
         
-        exec(`git add public/data/attributes.json && git commit -m "Auto-update attributes.json via UI" && ${pushCmd}`, (error, stdout, stderr) => {
+        const gitSetup = 'git config user.email "bot@render.com" && git config user.name "Render Bot"';
+        exec(`${gitSetup} && git add public/data/attributes.json && git commit -m "Auto-update attributes.json via UI" && ${pushCmd}`, (error, stdout, stderr) => {
             if (error) {
                 console.error('Git push error:', error.message);
                 // Ми не кидаємо помилку клієнту, бо локально файл вже збережено
