@@ -360,11 +360,16 @@ document.addEventListener('DOMContentLoaded', () => {
         products.forEach(p => {
             const card = document.createElement('div');
             card.className = 'product-card';
+            card.style.position = 'relative';
+            
+            const isInQueue = exportQueue.some(item => String(item['Ідентифікатор_товару']) === String(p.id));
+            const badgeHtml = isInQueue ? `<div style="position: absolute; top: 10px; right: 10px; background: #217346; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;">В черзі</div>` : '';
             
             const imgSrc = p.main_image || 'https://via.placeholder.com/250?text=No+Image';
             const price = p.price ? `${p.price} ${p.currency || '₴'}` : 'Ціна не вказана';
             
             card.innerHTML = `
+                ${badgeHtml}
                 <img src="${imgSrc}" class="product-img" alt="Product">
                 <div class="product-info">
                     <div class="product-name">${p.name}</div>
@@ -991,6 +996,9 @@ async function openModal(summaryProduct) {
             document.getElementById('export-widget').style.display = 'flex';
             document.getElementById('export-count').textContent = `В черзі: ${exportQueue.length} товарів`;
             
+            // Перемальовуємо картки, щоб оновити зелені бейджі
+            renderProducts(currentProducts);
+            
             statusMsg.textContent = '✅ Додано до черги експорту!';
             statusMsg.className = 'status-msg success';
             
@@ -1149,6 +1157,9 @@ async function openModal(summaryProduct) {
                 localStorage.removeItem('promExportQueue');
                 document.getElementById('export-widget').style.display = 'none';
                 document.getElementById('export-count').textContent = `В черзі: 0 товарів`;
+                
+                // Перемальовуємо товари, щоб зняти мітки
+                renderProducts(currentProducts);
             }
         });
     }
