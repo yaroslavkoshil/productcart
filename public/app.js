@@ -717,19 +717,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const keywordsRu = document.getElementById('ai-keywords-ru').value.trim();
             const newSku = document.getElementById('edit-sku').value.trim();
 
+            // Визначаємо базову мову магазину. Якщо в name_multilang є 'uk', значить базова мова - 'ru'.
+            const isBaseRu = currentEditingProduct.name_multilang && currentEditingProduct.name_multilang.uk !== undefined;
+
             const updatedProduct = {
                 id: currentEditingProduct.id,
-                name: nameUk || currentEditingProduct.name, // дефолт для базового поля
-                keywords: keywordsUk || currentEditingProduct.keywords, // базова мова - укр
-                description: descUk || currentEditingProduct.description
+                name: isBaseRu ? nameRu : nameUk, 
+                keywords: isBaseRu ? keywordsRu : keywordsUk, 
+                description: isBaseRu ? descRu : descUk
             };
             
             const translationData = {
                 product_id: currentEditingProduct.id.toString(),
-                lang: 'ru',
-                name: nameRu,
-                keywords: keywordsRu,
-                description: descRu
+                lang: isBaseRu ? 'uk' : 'ru',
+                name: isBaseRu ? nameUk : nameRu,
+                keywords: isBaseRu ? keywordsUk : keywordsRu,
+                description: isBaseRu ? descUk : descRu
             };
 
             const response = await fetch(`${API_BASE}/save`, {
