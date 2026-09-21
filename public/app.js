@@ -752,6 +752,7 @@ async function openModal(summaryProduct) {
         document.getElementById('ai-desc-ru').value = currentDescRu;
         
         updateCounters();
+        setTimeout(window.triggerAutoResize, 10); // Даємо час DOM оновитись
         
         document.getElementById('save-status').textContent = '';
         document.getElementById('save-status').className = 'status-msg';
@@ -838,6 +839,7 @@ async function openModal(summaryProduct) {
                     }
                 }
                 updateCounters();
+                setTimeout(window.triggerAutoResize, 10);
 
             } catch (error) {
                 alert(error.message);
@@ -932,6 +934,7 @@ async function openModal(summaryProduct) {
 
                 document.getElementById(targetFieldId).value = translated;
                 updateCounters();
+                setTimeout(window.triggerAutoResize, 10);
 
             } catch (error) {
                 alert(error.message);
@@ -1137,10 +1140,6 @@ async function openModal(summaryProduct) {
                 counter.textContent = `${len}/${limit}`;
                 if (len > limit) counter.classList.add('error');
                 else counter.classList.remove('error');
-                
-                if (inputId.includes('keywords')) {
-                    autoResize(input);
-                }
             }
         };
 
@@ -1150,9 +1149,21 @@ async function openModal(summaryProduct) {
         updateCount('ai-keywords-ru', 'count-keywords-ru', 1024);
     }
 
+    // Функція для примусового ресайзу всіх текстових полів, викликається при відкритті модалки та генерації
+    window.triggerAutoResize = function() {
+        ['ai-keywords-uk', 'ai-keywords-ru', 'ai-desc-uk', 'ai-desc-ru'].forEach(id => {
+            autoResize(document.getElementById(id));
+        });
+    };
+
     ['ai-name-uk', 'ai-name-ru', 'ai-keywords-uk', 'ai-keywords-ru'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('input', updateCounters);
+    });
+
+    ['ai-keywords-uk', 'ai-keywords-ru', 'ai-desc-uk', 'ai-desc-ru'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', () => autoResize(el));
     });
 
     // Кнопки "Копіювати з поточних"
@@ -1173,6 +1184,7 @@ async function openModal(summaryProduct) {
                 document.getElementById('ai-desc-ru').value = ruVal;
             }
             updateCounters();
+            setTimeout(window.triggerAutoResize, 10);
         });
     });
     
