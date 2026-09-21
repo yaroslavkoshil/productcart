@@ -105,6 +105,16 @@
                         <label>Код/Артикул (SKU):</label>
                         <input type="text" id="edit-sku" class="input">
                     </div>
+
+                    <div class="data-group mb-15">
+                        <div class="label-with-action">
+                            <label>Характеристики (Атрибути):</label>
+                            <button class="btn secondary small" id="add-attr-btn">+ Додати</button>
+                        </div>
+                        <div id="attributes-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
+                            <!-- Attributes will be rendered here -->
+                        </div>
+                    </div>
                     
                     <div class="data-group">
                         <div class="label-with-action">
@@ -181,6 +191,6 @@
         </div>
     </div>
 
-    <script src="app.js?v=10"></script>
+    <script src="app.js?v=11"></script>
 </body>
 </html>

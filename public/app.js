@@ -427,7 +427,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ЛОГІКА МОДАЛЬНОГО ВІКНА ТА ШІ ---
 
-    async function openModal(summaryProduct) {
+    // Створення рядка характеристики
+function createAttributeRow(name = '', value = '', id = '') {
+    const row = document.createElement('div');
+    row.className = 'attr-row';
+    row.style = 'display: flex; gap: 8px; align-items: center;';
+    row.innerHTML = `
+        <input type="text" class="input attr-name" placeholder="Назва (напр. Колір)" value="${name}" data-id="${id}" style="flex: 1; padding: 4px;">
+        <input type="text" class="input attr-value" placeholder="Значення (напр. Білий)" value="${value}" style="flex: 1; padding: 4px;">
+        <button class="btn icon-btn remove-attr-btn" title="Видалити" style="color: #ff4d4f; padding: 4px; flex-shrink: 0;">❌</button>
+    `;
+    
+    row.querySelector('.remove-attr-btn').addEventListener('click', (e) => {
+        e.preventDefault();
+        row.remove();
+    });
+    
+    return row;
+}
+
+// Додавання нової характеристики
+document.getElementById('add-attr-btn').addEventListener('click', (e) => {
+    e.preventDefault();
+    document.getElementById('attributes-container').appendChild(createAttributeRow());
+});
+
+async function openModal(summaryProduct) {
         // Показуємо лоадер або просто блокуємо клік поки вантажиться
         document.getElementById('modal-title').textContent = `Завантаження...`;
         modal.style.display = 'block';
@@ -531,6 +556,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Очищаємо поля для нових значень
         document.getElementById('edit-sku').value = product.sku || '';
+
+        // Заповнюємо характеристики
+        const attrContainer = document.getElementById('attributes-container');
+        attrContainer.innerHTML = '';
+        const attributes = product.attributes || product.parameters || [];
+        if (attributes.length > 0) {
+            attributes.forEach(attr => {
+                attrContainer.appendChild(createAttributeRow(attr.name, attr.value, attr.id || ''));
+            });
+        }
         document.getElementById('ai-name-uk').value = currentNameUk;
         document.getElementById('ai-name-ru').value = currentNameRu;
         document.getElementById('ai-keywords-uk').value = currentKeywords;
@@ -720,11 +755,26 @@ document.addEventListener('DOMContentLoaded', () => {
             // Визначаємо базову мову магазину. Якщо в name_multilang є 'uk', значить базова мова - 'ru'.
             const isBaseRu = currentEditingProduct.name_multilang && currentEditingProduct.name_multilang.uk !== undefined;
 
+            // Збираємо характеристики
+            const attributes = [];
+            document.querySelectorAll('.attr-row').forEach(row => {
+                const nameInput = row.querySelector('.attr-name');
+                const valInput = row.querySelector('.attr-value');
+                const name = nameInput.value.trim();
+                const value = valInput.value.trim();
+                if (name && value) {
+                    const attr = { name, value };
+                    if (nameInput.dataset.id) attr.id = parseInt(nameInput.dataset.id, 10);
+                    attributes.push(attr);
+                }
+            });
+
             const updatedProduct = {
                 id: currentEditingProduct.id,
                 name: isBaseRu ? nameRu : nameUk, 
                 keywords: isBaseRu ? keywordsRu : keywordsUk, 
-                description: isBaseRu ? descRu : descUk
+                description: isBaseRu ? descRu : descUk,
+                attributes: attributes
             };
             
             const translationData = {
@@ -758,6 +808,7 @@ document.addEventListener('DOMContentLoaded', () => {
             currentEditingProduct.description = updatedProduct.description;
             currentEditingProduct.name_multilang = updatedProduct.name_multilang;
             currentEditingProduct.description_multilang = updatedProduct.description_multilang;
+            currentEditingProduct.attributes = updatedProduct.attributes;
 
             // Перемальовуємо каталог, щоб побачити нову назву
             renderProducts(currentProducts);
