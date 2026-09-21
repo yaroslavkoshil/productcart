@@ -27,6 +27,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastProductId = null;
     let currentGroupId = 'all';
     let allGroupsMap = {}; // зберігаємо дерево груп
+    let selectedProductIds = new Set();
+
     
     // Черга для XLSX експорту
     let exportQueue = [];
@@ -362,6 +364,9 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'product-card';
             card.style.position = 'relative';
             
+            const isSelected = selectedProductIds.has(String(p.id));
+            const checkedAttr = isSelected ? 'checked' : '';
+            
             const isInQueue = exportQueue.some(item => String(item['Ідентифікатор_товару']) === String(p.id));
             const badgeHtml = isInQueue ? `<div class="status-badge in-queue"><span>✓</span> В черзі</div>` : `<div></div>`; // empty div to keep flex space if needed, though justify-content handles it
             
@@ -372,6 +377,9 @@ document.addEventListener('DOMContentLoaded', () => {
             const price = p.price ? `${p.price} ${p.currency || '₴'}` : '---';
             
             card.innerHTML = `
+                <div style="position: absolute; top: 10px; left: 10px; z-index: 10;">
+                    <input type="checkbox" class="bulk-cb" data-id="${p.id}" ${checkedAttr} style="width: 18px; height: 18px; cursor: pointer; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                </div>
                 <div class="card-image-wrap">
                     <div class="card-badges">
                         ${badgeHtml}
@@ -390,8 +398,54 @@ document.addEventListener('DOMContentLoaded', () => {
                 </div>
             `;
             
-            card.addEventListener('click', () => openModal(p));
+            card.addEventListener('click', (e) => {
+                // Якщо клік був по чекбоксу, не відкриваємо модалку
+                if (e.target.classList.contains('bulk-cb')) {
+                    const id = e.target.dataset.id;
+                    if (e.target.checked) selectedProductIds.add(String(id));
+                    else selectedProductIds.delete(String(id));
+                    updateBulkActionBar();
+                    return;
+                }
+                openModal(p);
+            });
             productsGrid.appendChild(card);
+        });
+        updateBulkActionBar();
+    }
+
+    function updateBulkActionBar() {
+        const bar = document.getElementById('bulk-action-bar');
+        const countSpan = document.getElementById('bulk-selected-count');
+        const selectAllCb = document.getElementById('bulk-select-all');
+        
+        if (!bar || !countSpan) return;
+        
+        const count = selectedProductIds.size;
+        if (count > 0) {
+            bar.style.display = 'flex';
+            countSpan.textContent = `${count} вибрано`;
+        } else {
+            bar.style.display = 'none';
+        }
+        
+        // Синхронізація "Вибрати всі" чекбокса
+        if (currentProducts && currentProducts.length > 0 && count === currentProducts.length) {
+            selectAllCb.checked = true;
+        } else {
+            selectAllCb.checked = false;
+        }
+    }
+
+    const bulkSelectAll = document.getElementById('bulk-select-all');
+    if (bulkSelectAll) {
+        bulkSelectAll.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                currentProducts.forEach(p => selectedProductIds.add(String(p.id)));
+            } else {
+                selectedProductIds.clear();
+            }
+            renderProducts(currentProducts);
         });
     }
 
@@ -1283,6 +1337,78 @@ async function openModal(summaryProduct) {
                 mainBtn.innerHTML = originalText;
                 mainBtn.disabled = false;
             }
+        });
+    // === BULK MAGIC LOGIC ===
+    const runBulkBtn = document.getElementById('run-bulk-magic-btn');
+    const bulkOverlay = document.getElementById('bulk-progress-overlay');
+    const bulkProgressText = document.getElementById('bulk-progress-text');
+    const bulkProgressFill = document.getElementById('bulk-progress-fill');
+    
+    if (runBulkBtn && bulkOverlay) {
+        runBulkBtn.addEventListener('click', async () => {
+            const ids = Array.from(selectedProductIds);
+            if (ids.length === 0) return;
+            
+            if (!confirm(`Ви впевнені, що хочете автоматично згенерувати контент для ${ids.length} товарів? Процес може зайняти декілька хвилин. Сторінку не закривати.`)) {
+                return;
+            }
+            
+            bulkOverlay.style.display = 'flex';
+            
+            for (let i = 0; i < ids.length; i++) {
+                const id = ids[i];
+                const product = currentProducts.find(p => String(p.id) === id);
+                if (!product) continue;
+                
+                bulkProgressText.textContent = `Обробка товару ${i + 1} з ${ids.length} (${product.name})`;
+                bulkProgressFill.style.width = `${((i) / ids.length) * 100}%`;
+                
+                try {
+                    // 1. Відкриваємо модалку
+                    await openModal(product);
+                    await new Promise(r => setTimeout(r, 800)); // Чекаємо рендер та ініт
+                    
+                    // 2. Тиснемо магічну кнопку
+                    const autoFill = document.getElementById('auto-fill-all-btn');
+                    if (autoFill) {
+                        autoFill.click();
+                        // Чекаємо поки магія закінчиться (кнопка стане активною)
+                        await new Promise(resolve => {
+                            const interval = setInterval(() => {
+                                if (!autoFill.disabled) {
+                                    clearInterval(interval);
+                                    resolve();
+                                }
+                            }, 500);
+                        });
+                        await new Promise(r => setTimeout(r, 1000)); // Даємо секунду перепочити перед збереженням
+                    }
+                    
+                    // 3. Зберігаємо в XLSX чергу
+                    const saveBtn = document.getElementById('save-xlsx-btn');
+                    if (saveBtn) {
+                        saveBtn.click();
+                        await new Promise(r => setTimeout(r, 800)); // Чекаємо збереження
+                    }
+                    
+                    // 4. Закриваємо модалку
+                    const closeBtn = document.querySelector('.close-modal');
+                    if (closeBtn) closeBtn.click();
+                    await new Promise(r => setTimeout(r, 800)); // Анімація закриття та відмальовка
+                    
+                } catch (err) {
+                    console.error('Помилка Bulk Magic на товарі', id, err);
+                }
+            }
+            
+            bulkProgressFill.style.width = `100%`;
+            bulkProgressText.textContent = `Готово! Оброблено ${ids.length} товарів.`;
+            
+            await new Promise(r => setTimeout(r, 2000));
+            bulkOverlay.style.display = 'none';
+            selectedProductIds.clear();
+            renderProducts(currentProducts);
+            alert(`Масову обробку завершено! ${ids.length} товарів успішно згенеровано і додано в чергу.`);
         });
     }
 });
