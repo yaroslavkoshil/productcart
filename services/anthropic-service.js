@@ -27,7 +27,6 @@ class AnthropicService {
 
 Поточна інформація про товар:
 Оригінальна назва: ${productContext.name}
-Шлях категорії: ${productContext.categoryPath || productContext.group || 'Не вказано'}
 Опис: ${productContext.description ? productContext.description.substring(0, 300) + '...' : 'Немає'}
 
 Згенеруй ідеальну назву ВИКЛЮЧНО українською мовою.
@@ -60,7 +59,6 @@ class AnthropicService {
 4. МОВА: ВИКЛЮЧНО УКРАЇНСЬКА! Жодних російських слів (російські ключі ми додамо окремо пізніше)!
 
 Товар: ${productContext.name}
-Шлях категорії: ${productContext.categoryPath || productContext.group || 'Не вказано'}
 
 Згенеруй пул ключів ВИКЛЮЧНО українською мовою.
 Поверни ТІЛЬКИ рядок з ключовими словами, без пояснень.`;
