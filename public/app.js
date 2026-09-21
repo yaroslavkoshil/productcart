@@ -918,19 +918,33 @@ async function openModal(summaryProduct) {
                 }
             });
 
+            let finalKeywordsUk = keywordsUk;
+            if (finalKeywordsUk.length > 1024) {
+                finalKeywordsUk = finalKeywordsUk.substring(0, 1024);
+                const lastComma = finalKeywordsUk.lastIndexOf(',');
+                if (lastComma > 0) finalKeywordsUk = finalKeywordsUk.substring(0, lastComma);
+            }
+            
+            let finalKeywordsRu = keywordsRu;
+            if (finalKeywordsRu.length > 1024) {
+                finalKeywordsRu = finalKeywordsRu.substring(0, 1024);
+                const lastComma = finalKeywordsRu.lastIndexOf(',');
+                if (lastComma > 0) finalKeywordsRu = finalKeywordsRu.substring(0, lastComma);
+            }
+
             const updatedProduct = {
                 id: currentEditingProduct.id,
                 name: isBaseRu ? nameRu : nameUk, 
-                keywords: isBaseRu ? keywordsRu : keywordsUk, 
+                keywords: isBaseRu ? finalKeywordsRu : finalKeywordsUk, 
                 description: isBaseRu ? descRu : descUk,
-                attributes: attributes
+                parameters: attributes // Prom API V1 uses 'parameters' instead of 'attributes'
             };
             
             const translationData = {
                 product_id: currentEditingProduct.id.toString(),
                 lang: isBaseRu ? 'uk' : 'ru',
                 name: isBaseRu ? nameUk : nameRu,
-                keywords: isBaseRu ? keywordsUk : keywordsRu,
+                keywords: isBaseRu ? finalKeywordsUk : finalKeywordsRu,
                 description: isBaseRu ? descUk : descRu
             };
 
