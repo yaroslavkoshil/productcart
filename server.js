@@ -33,17 +33,21 @@ app.get('/api/groups', async (req, res) => {
     }
 });
 
-// 2. Отримати список товарів
+// 3. Отримати товари (або пошук)
 app.get('/api/products', async (req, res) => {
     try {
         const token = req.headers['x-prom-token'];
         if (!token) return res.status(401).json({ error: 'Токен не надано' });
 
-        const limit = req.query.limit || 50;
-        const lastId = req.query.last_id;
-        const groupId = req.query.group_id;
-
-        const data = await promApi.getProducts(token, limit, lastId, groupId);
+        const { limit, last_id, group_id, query } = req.query;
+        
+        let data;
+        if (query) {
+            data = await promApi.searchProducts(token, query);
+        } else {
+            data = await promApi.getProducts(token, limit, last_id, group_id);
+        }
+        
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });

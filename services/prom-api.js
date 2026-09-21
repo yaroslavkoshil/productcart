@@ -54,6 +54,69 @@ class PromApiService {
     }
 
     /**
+     * Глобальний пошук товарів
+     */
+    async searchProducts(token, query) {
+        const client = this.getClient(token);
+        const lowerQuery = query.toLowerCase().trim();
+        const isNumeric = /^\d+$/.test(lowerQuery);
+        
+        let results = [];
+
+        // 1. Якщо це число, пробуємо знайти по ID
+        if (isNumeric) {
+            try {
+                const response = await client.get(`/products/${lowerQuery}`);
+                if (response.data && response.data.product) {
+                    results.push(response.data.product);
+                }
+            } catch (e) {
+                // Ignore 404
+            }
+        }
+
+        // 2. Якщо не знайдено по ID, або це текст, шукаємо по імені/SKU, завантажуючи сторінки
+        if (results.length === 0) {
+            let lastId = null;
+            const limit = 100; // Максимум для Prom.ua API
+            let pagesChecked = 0;
+            const MAX_PAGES = 10; // Обмеження щоб не чекати вічно (до 1000 товарів)
+
+            while (pagesChecked < MAX_PAGES) {
+                try {
+                    let url = `/products/list?limit=${limit}`;
+                    if (lastId) url += `&last_id=${lastId}`;
+
+                    const response = await client.get(url);
+                    const products = response.data.products || [];
+                    
+                    if (products.length === 0) break; // Кінець каталогу
+
+                    // Фільтруємо
+                    const matched = products.filter(p => {
+                        const nameRu = (p.name || '').toLowerCase();
+                        const nameUk = (p.name_multilang && p.name_multilang.uk ? p.name_multilang.uk : '').toLowerCase();
+                        const sku = (p.sku || '').toLowerCase();
+                        return nameRu.includes(lowerQuery) || nameUk.includes(lowerQuery) || sku.includes(lowerQuery);
+                    });
+
+                    results = results.concat(matched);
+
+                    if (results.length >= 20) break; // Знайшли достатньо
+
+                    lastId = products[products.length - 1].id;
+                    pagesChecked++;
+                } catch (e) {
+                    console.error('Prom API search loop error:', e.message);
+                    break; // Перериваємо пошук при помилці
+                }
+            }
+        }
+
+        return { products: results.slice(0, 50) };
+    }
+
+    /**
      * Отримує список груп (категорій) - всі сторінки автоматично
      */
     async getGroups(token) {

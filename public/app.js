@@ -313,7 +313,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Пошук товарів
+    // Пошук товарів локально (по завантажених)
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase().trim();
         if (!query) {
@@ -332,6 +332,42 @@ document.addEventListener('DOMContentLoaded', () => {
         
         renderProducts(filtered);
     });
+
+    // Глобальний пошук по всьому магазину
+    document.getElementById('search-btn').addEventListener('click', performGlobalSearch);
+    searchInput.addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') performGlobalSearch();
+    });
+
+    async function performGlobalSearch() {
+        const query = searchInput.value.trim();
+        if (!query) return;
+
+        productsGrid.innerHTML = '<div class="loading">Шукаю по всьому магазину (це може зайняти час)...</div>';
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        if(loadMoreBtn) loadMoreBtn.style.display = 'none';
+
+        try {
+            const token = localStorage.getItem('promToken');
+            const response = await fetch(`${API_BASE}/products?query=${encodeURIComponent(query)}`, {
+                headers: { 'x-prom-token': token }
+            });
+
+            if (!response.ok) throw new Error('Помилка пошуку');
+            const data = await response.json();
+            
+            // Зберігаємо як поточні товари, щоб можна було фільтрувати
+            currentProducts = data.products || [];
+            currentGroupId = null; // скидаємо активну групу
+            
+            // Знімаємо виділення з дерева категорій
+            document.querySelectorAll('.group-item').forEach(el => el.classList.remove('active'));
+
+            renderProducts(currentProducts);
+        } catch (error) {
+            productsGrid.innerHTML = `<div class="error-msg">Помилка пошуку: ${error.message}</div>`;
+        }
+    }
 
     // --- ЛОГІКА МОДАЛЬНОГО ВІКНА ТА ШІ ---
 

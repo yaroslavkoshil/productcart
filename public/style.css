@@ -48,6 +48,21 @@ header p {
     color: var(--text-muted);
 }
 
+.search-bar {
+    display: flex;
+    gap: 10px;
+}
+.search-bar .input {
+    flex: 1;
+}
+
+.stats {
+    background-color: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+}
+
 .card {
     background-color: var(--card-bg);
     border: 1px solid var(--border);
