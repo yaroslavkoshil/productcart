@@ -1148,6 +1148,15 @@ async function openModal(summaryProduct) {
         });
     });
     
+    // Кнопка рандомізації SKU
+    const randSkuBtn = document.getElementById('rand-sku-btn');
+    if (randSkuBtn) {
+        randSkuBtn.addEventListener('click', () => {
+            // Генеруємо 13-значне число
+            const randSku = Math.floor(1000000000000 + Math.random() * 9000000000000);
+            document.getElementById('edit-sku').value = randSku;
+        });
+    }
     // Кнопка очищення черги
     const clearBtn = document.getElementById('clear-xlsx-btn');
     if (clearBtn) {
