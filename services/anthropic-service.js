@@ -74,7 +74,7 @@ class AnthropicService {
 
         try {
             const msg = await client.messages.create({
-                model: "claude-3-haiku-20240307",
+                model: "claude-haiku-4-5-20251001",
                 max_tokens: 150,
                 messages: [{ role: "user", content: prompt }]
             });
@@ -106,7 +106,7 @@ class AnthropicService {
 
         try {
             const msg = await client.messages.create({
-                model: "claude-3-haiku-20240307",
+                model: "claude-haiku-4-5-20251001",
                 max_tokens: 500,
                 messages: [{ role: "user", content: prompt }]
             });
@@ -150,7 +150,7 @@ class AnthropicService {
 
         try {
             const msg = await client.messages.create({
-                model: "claude-3-haiku-20240307",
+                model: "claude-sonnet-4-5-20250929",
                 max_tokens: 1500,
                 messages: [{ role: "user", content: prompt }]
             });
@@ -204,7 +204,7 @@ class AnthropicService {
                 const client = this.getClient(apiKey);
                 const prompt = `Переклади наступний текст з української на російську мову. Збережи всі HTML-теги, структуру та форматування. Поверни ТІЛЬКИ перекладений текст без додаткових коментарів чи лапок:\n\n${text}`;
                 const msg = await client.messages.create({
-                    model: "claude-3-haiku-20240307",
+                    model: "claude-haiku-4-5-20251001",
                     max_tokens: 2000,
                     messages: [{ role: "user", content: prompt }]
                 });
