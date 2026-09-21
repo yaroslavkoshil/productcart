@@ -498,8 +498,7 @@ function createAttributeRow(name = '', value = '', id = '', schema = null) {
                     const checked = currentValues.includes(v) ? 'checked' : '';
                     checkboxesHtml += `<label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 0.85rem;"><input type="checkbox" value="${v}" ${checked}> ${v}</label>`;
                 });
-                
-                valueInputHtml = `<div class="attr-value multi-checkbox-container" style="padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); max-height: 150px; overflow-y: auto; background: white;">${checkboxesHtml}</div>`;
+                valueInputHtml = `<div class="attr-value multi-checkbox-container" style="padding: 6px 10px; border: 1px solid var(--border); border-radius: var(--radius-sm); max-height: 120px; overflow-y: auto; background: white; width: 100%; box-shadow: inset 0 1px 2px rgba(0,0,0,0.02);">${checkboxesHtml}</div>`;
             } else {
                 // Звичайний випадаючий список
                 let options = `<option value="">-- Оберіть --</option>`;
@@ -510,7 +509,7 @@ function createAttributeRow(name = '', value = '', id = '', schema = null) {
                     const selected = v === value ? 'selected' : '';
                     options += `<option value="${v}" ${selected}>${v}</option>`;
                 });
-                valueInputHtml = `<select class="edit-input attr-value">${options}</select>`;
+                valueInputHtml = `<select class="edit-input attr-value" style="width: 100%;">${options}</select>`;
             }
         }
     }
@@ -520,7 +519,7 @@ function createAttributeRow(name = '', value = '', id = '', schema = null) {
             ${nameHtml}
             <button class="btn-delete remove-attr-btn" title="Видалити" style="font-size:1rem; line-height:1; padding:0;">✕</button>
         </label>
-        <div style="display: flex; align-items: center; gap: 4px;">
+        <div style="display: flex; align-items: center; gap: 4px; width: 100%;">
             ${valueInputHtml}
             ${unitHtml}
         </div>
