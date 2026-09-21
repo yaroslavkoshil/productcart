@@ -1,4 +1,6 @@
-const API_BASE = '/api';
+const API_BASE = (window.location.protocol === 'file:' || (window.location.hostname === 'localhost' && window.location.port !== '3000' && window.location.port !== '')) 
+    ? 'http://localhost:3000/api' 
+    : '/api';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Елементи DOM
@@ -557,6 +559,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const anthropicToken = localStorage.getItem('anthropicToken');
+                if (!anthropicToken) {
+                    throw new Error('Anthropic токен відсутній! Будь ласка, натисніть "Відключитись" вгорі та повторно введіть ваш API ключ Claude.');
+                }
+
                 const response = await fetch(`${API_BASE}/generate`, {
                     method: 'POST',
                     headers: {
@@ -569,7 +575,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     })
                 });
 
-                if (!response.ok) throw new Error('Помилка ШІ');
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.error || `Помилка ШІ (HTTP ${response.status})`);
+                }
                 const data = await response.json();
                 const textRes = data.result;
 

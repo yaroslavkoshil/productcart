@@ -1,6 +1,35 @@
 const { Anthropic } = require('@anthropic-ai/sdk');
 const axios = require('axios');
 
+function formatAnthropicError(error) {
+    let msg = '';
+    if (error.error && error.error.message) {
+        msg = error.error.message;
+    } else if (typeof error.message === 'string') {
+        const jsonMatch = error.message.match(/\{.*\}$/);
+        if (jsonMatch) {
+            try {
+                const parsed = JSON.parse(jsonMatch[0]);
+                if (parsed.error && parsed.error.message) msg = parsed.error.message;
+            } catch (e) {}
+        }
+        if (!msg) msg = error.message;
+    } else {
+        msg = 'Невідома помилка Anthropic';
+    }
+
+    if (msg.includes('credit balance is too low') || msg.includes('credit_balance_too_low')) {
+        return 'На рахунку Anthropic закінчилися кошти (нульовий баланс). Поповніть баланс на console.anthropic.com';
+    }
+    if (msg.includes('API key is invalid') || msg.includes('authentication_error')) {
+        return 'Недійсний API ключ Anthropic. Перевірте ключ у формі підключення';
+    }
+    if (msg.includes('rate_limit') || msg.includes('Too Many Requests')) {
+        return 'Перевищено ліміт запитів Anthropic (Rate Limit). Зачекайте 1-2 хвилини';
+    }
+    return msg;
+}
+
 class AnthropicService {
     /**
      * Ініціалізує клієнт Anthropic з переданим ключем
@@ -18,6 +47,16 @@ class AnthropicService {
     async generateTitle(apiKey, productContext) {
         const client = this.getClient(apiKey);
         
+        const name = (productContext && productContext.name) ? productContext.name : '';
+        let desc = 'Немає';
+        if (productContext && productContext.description) {
+            if (typeof productContext.description === 'string') {
+                desc = productContext.description.substring(0, 300) + '...';
+            } else if (typeof productContext.description === 'object' && productContext.description.uk) {
+                desc = String(productContext.description.uk).substring(0, 300) + '...';
+            }
+        }
+        
         const prompt = `Ти SEO-спеціаліст маркетплейсу Prom.ua. Твоє завдання - покращити назву товару.
 Правила Prom.ua для назв:
 1. Максимум 110 символів.
@@ -27,22 +66,32 @@ class AnthropicService {
 5. МОВА: ВИКЛЮЧНО УКРАЇНСЬКА! Жодного російського слова!
 
 Поточна інформація про товар:
-Оригінальна назва: ${productContext.name}
-Опис: ${productContext.description ? productContext.description.substring(0, 300) + '...' : 'Немає'}
+Оригінальна назва: ${name}
+Опис: ${desc}
 
 Згенеруй ідеальну назву ВИКЛЮЧНО українською мовою.
 У відповіді поверни ТІЛЬКИ текст назви, без лапок чи пояснень.`;
 
         try {
-            const msg = await client.messages.create({
-                model: "claude-3-haiku-20240307",
-                max_tokens: 150,
-                messages: [{ role: "user", content: prompt }]
-            });
+            let msg;
+            try {
+                msg = await client.messages.create({
+                    model: "claude-3-haiku-20240307",
+                    max_tokens: 150,
+                    messages: [{ role: "user", content: prompt }]
+                });
+            } catch (haikuErr) {
+                console.warn('claude-3-haiku-20240307 failed, trying claude-3-5-haiku-20241022:', haikuErr.message);
+                msg = await client.messages.create({
+                    model: "claude-3-5-haiku-20241022",
+                    max_tokens: 150,
+                    messages: [{ role: "user", content: prompt }]
+                });
+            }
             return msg.content[0].text.trim().replace(/^"|"$/g, '');
         } catch (error) {
             console.error('Anthropic generateTitle error:', error);
-            throw new Error('Помилка генерації назви ШІ (Anthropic)');
+            throw new Error(`Помилка ШІ: ${formatAnthropicError(error)}`);
         }
     }
 
@@ -51,6 +100,7 @@ class AnthropicService {
      */
     async generateKeywords(apiKey, productContext) {
         const client = this.getClient(apiKey);
+        const name = (productContext && productContext.name) ? productContext.name : '';
 
         const prompt = `Ти SEO-спеціаліст. Згенеруй пошукові запити (keywords) для товару на маркетплейсі.
 Правила:
@@ -59,21 +109,31 @@ class AnthropicService {
 3. Довжина тексту має бути від 900 до 1020 символів.
 4. МОВА: ВИКЛЮЧНО УКРАЇНСЬКА! Жодних російських слів (російські ключі ми додамо окремо пізніше)!
 
-Товар: ${productContext.name}
+Товар: ${name}
 
 Згенеруй пул ключів ВИКЛЮЧНО українською мовою.
 Поверни ТІЛЬКИ рядок з ключовими словами, без пояснень.`;
 
         try {
-            const msg = await client.messages.create({
-                model: "claude-3-haiku-20240307",
-                max_tokens: 500,
-                messages: [{ role: "user", content: prompt }]
-            });
+            let msg;
+            try {
+                msg = await client.messages.create({
+                    model: "claude-3-haiku-20240307",
+                    max_tokens: 500,
+                    messages: [{ role: "user", content: prompt }]
+                });
+            } catch (haikuErr) {
+                console.warn('claude-3-haiku-20240307 failed, trying claude-3-5-haiku-20241022:', haikuErr.message);
+                msg = await client.messages.create({
+                    model: "claude-3-5-haiku-20241022",
+                    max_tokens: 500,
+                    messages: [{ role: "user", content: prompt }]
+                });
+            }
             return msg.content[0].text.trim();
         } catch (error) {
             console.error('Anthropic generateKeywords error:', error);
-            throw new Error('Помилка генерації ключових слів ШІ (Anthropic)');
+            throw new Error(`Помилка ШІ: ${formatAnthropicError(error)}`);
         }
     }
 
@@ -82,6 +142,17 @@ class AnthropicService {
      */
     async generateDescription(apiKey, productContext) {
         const client = this.getClient(apiKey);
+        const name = (productContext && productContext.name) ? productContext.name : '';
+        const price = (productContext && productContext.price) ? productContext.price : '';
+        const currency = (productContext && productContext.currency) ? productContext.currency : 'UAH';
+        let desc = 'Немає';
+        if (productContext && productContext.description) {
+            if (typeof productContext.description === 'string') {
+                desc = productContext.description;
+            } else if (typeof productContext.description === 'object' && productContext.description.uk) {
+                desc = String(productContext.description.uk);
+            }
+        }
 
         const prompt = `Ти професійний копірайтер для e-commerce. Напиши продаючий опис для товару.
 Вимоги:
@@ -91,18 +162,28 @@ class AnthropicService {
 4. МОВА: ВИКЛЮЧНО УКРАЇНСЬКА! Жодного російського слова в тексті опису!
 
 Поточна інформація:
-Назва: ${productContext.name}
-Ціна: ${productContext.price} ${productContext.currency}
-Поточний опис (якщо є): ${productContext.description || 'Немає'}
+Назва: ${name}
+Ціна: ${price} ${currency}
+Поточний опис (якщо є): ${desc}
 
 Напиши опис ВИКЛЮЧНО українською мовою. Поверни ТІЛЬКИ HTML-код опису без додаткових пояснень.`;
 
         try {
-            const msg = await client.messages.create({
-                model: "claude-3-5-sonnet-20241022",
-                max_tokens: 1500,
-                messages: [{ role: "user", content: prompt }]
-            });
+            let msg;
+            try {
+                msg = await client.messages.create({
+                    model: "claude-3-5-sonnet-20241022",
+                    max_tokens: 1500,
+                    messages: [{ role: "user", content: prompt }]
+                });
+            } catch (sonnetErr) {
+                console.warn('claude-3-5-sonnet-20241022 failed, trying claude-3-5-haiku-20241022:', sonnetErr.message);
+                msg = await client.messages.create({
+                    model: "claude-3-5-haiku-20241022",
+                    max_tokens: 1500,
+                    messages: [{ role: "user", content: prompt }]
+                });
+            }
             
             let html = msg.content[0].text.trim();
             // Очищення від маркдауну
@@ -114,7 +195,7 @@ class AnthropicService {
             return html.trim();
         } catch (error) {
             console.error('Anthropic generateDescription error:', error);
-            throw new Error('Помилка генерації опису ШІ (Anthropic)');
+            throw new Error(`Помилка ШІ: ${formatAnthropicError(error)}`);
         }
     }
 

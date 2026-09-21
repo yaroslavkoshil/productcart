@@ -86,9 +86,14 @@ app.get('/api/products/:id', async (req, res) => {
 app.post('/api/generate', async (req, res) => {
     try {
         const anthropicToken = req.headers['x-anthropic-token'];
-        if (!anthropicToken) return res.status(401).json({ error: 'Anthropic токен не надано' });
+        if (!anthropicToken) {
+            return res.status(401).json({ error: 'Anthropic токен не надано. Введіть токен у формі підключення.' });
+        }
 
         const { product, type } = req.body;
+        if (!product) {
+            return res.status(400).json({ error: 'Дані товару не передано' });
+        }
         
         let result = '';
         if (type === 'title') {
@@ -103,6 +108,7 @@ app.post('/api/generate', async (req, res) => {
 
         res.json({ result });
     } catch (error) {
+        console.error('Generate route error:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
