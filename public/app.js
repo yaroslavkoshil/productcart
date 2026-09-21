@@ -452,17 +452,27 @@ function createAttributeRow(name = '', value = '', id = '', schema = null) {
         }
         
         if (schema.values && schema.values.length > 0) {
-            // Випадаючий список
-            let options = `<option value="">-- Оберіть --</option>`;
-            // Додаємо поточне значення, якщо його немає в списку (щоб не втратити дані)
-            if (value && !schema.values.includes(value)) {
-                options += `<option value="${value}" selected>${value} (поточне)</option>`;
-            }
+            const isMulti = schema.type === 'multiselect';
+            const multiAttr = isMulti ? 'multiple' : '';
+            
+            // Якщо значення є (збережене з Прому), воно може бути через кому для multiselect
+            const currentValues = value ? value.split(',').map(v => v.trim()) : [];
+            
+            let options = isMulti ? '' : `<option value="">-- Оберіть --</option>`;
+            
+            // Додаємо поточні значення, якщо їх немає в списку
+            currentValues.forEach(val => {
+                if (val && !schema.values.includes(val)) {
+                    options += `<option value="${val}" selected>${val} (поточне)</option>`;
+                }
+            });
+            
             schema.values.forEach(v => {
-                const selected = v === value ? 'selected' : '';
+                const selected = currentValues.includes(v) ? 'selected' : '';
                 options += `<option value="${v}" ${selected}>${v}</option>`;
             });
-            valueInputHtml = `<select class="input attr-value" style="flex: 1; padding: 4px;">${options}</select>`;
+            
+            valueInputHtml = `<select class="input attr-value ${isMulti ? 'choices-multi' : ''}" ${multiAttr} style="flex: 1; padding: 4px;">${options}</select>`;
         }
     }
     
@@ -649,6 +659,20 @@ async function openModal(summaryProduct) {
         Object.values(existingAttrsMap).forEach(attr => {
             attrContainer.appendChild(createAttributeRow(attr.name, attr.value, attr.id || ''));
         });
+        
+        // Ініціалізуємо Choices.js для multiselect полів
+        setTimeout(() => {
+            document.querySelectorAll('.choices-multi').forEach(el => {
+                new Choices(el, {
+                    removeItemButton: true,
+                    searchEnabled: true,
+                    searchPlaceholderValue: 'Пошук...',
+                    itemSelectText: '',
+                    noResultsText: 'Не знайдено',
+                    noChoicesText: 'Немає варіантів для вибору'
+                });
+            });
+        }, 50);
         
         document.getElementById('ai-name-uk').value = currentNameUk;
         document.getElementById('ai-name-ru').value = currentNameRu;
@@ -844,8 +868,18 @@ async function openModal(summaryProduct) {
             document.querySelectorAll('.attr-row').forEach(row => {
                 const nameInput = row.querySelector('.attr-name');
                 const valInput = row.querySelector('.attr-value');
+                
+                if (!nameInput || !valInput) return;
+                
                 const name = nameInput.value.trim();
-                const value = valInput.value.trim();
+                let value = '';
+                
+                if (valInput.tagName.toLowerCase() === 'select' && valInput.multiple) {
+                    value = Array.from(valInput.selectedOptions).map(opt => opt.value).join(', ');
+                } else {
+                    value = valInput.value.trim();
+                }
+                
                 if (name && value) {
                     const attr = { name, value };
                     if (nameInput.dataset.id) attr.id = parseInt(nameInput.dataset.id, 10);
