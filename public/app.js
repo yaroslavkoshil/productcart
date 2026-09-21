@@ -1387,7 +1387,7 @@ async function openModal(summaryProduct) {
                     }
                     
                     // 3. Зберігаємо в XLSX чергу
-                    const saveBtn = document.getElementById('save-xlsx-btn');
+                    const saveBtn = document.getElementById('save-btn');
                     if (saveBtn) {
                         saveBtn.click();
                         await new Promise(r => setTimeout(r, 800)); // Чекаємо збереження
