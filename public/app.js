@@ -1120,6 +1120,13 @@ async function openModal(summaryProduct) {
         }
     });
 
+    function autoResize(el) {
+        if (!el || el.tagName !== 'TEXTAREA') return;
+        el.style.height = 'auto';
+        el.style.height = (el.scrollHeight) + 'px';
+        el.style.overflow = 'hidden';
+    }
+
     // Оновлення лічильників символів
     function updateCounters() {
         const updateCount = (inputId, counterId, limit) => {
@@ -1130,6 +1137,10 @@ async function openModal(summaryProduct) {
                 counter.textContent = `${len}/${limit}`;
                 if (len > limit) counter.classList.add('error');
                 else counter.classList.remove('error');
+                
+                if (inputId.includes('keywords')) {
+                    autoResize(input);
+                }
             }
         };
 
