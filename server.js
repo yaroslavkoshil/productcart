@@ -246,7 +246,12 @@ app.post('/api/add-category', async (req, res) => {
         fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
         
         // Автоматично відправляємо зміни на GitHub
-        exec('git add public/data/attributes.json && git commit -m "Auto-update attributes.json via UI" && git push', (error, stdout, stderr) => {
+        let pushCmd = 'git push';
+        if (process.env.GITHUB_TOKEN) {
+            pushCmd = 'git push https://yaroslavkoshil:$GITHUB_TOKEN@github.com/yaroslavkoshil/productcart.git main';
+        }
+        
+        exec(`git add public/data/attributes.json && git commit -m "Auto-update attributes.json via UI" && ${pushCmd}`, (error, stdout, stderr) => {
             if (error) {
                 console.error('Git push error:', error.message);
                 // Ми не кидаємо помилку клієнту, бо локально файл вже збережено
