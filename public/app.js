@@ -820,7 +820,7 @@ async function openModal(summaryProduct) {
                             const val = textRes[id];
                             const nameInput = document.querySelector(`.attr-name[data-id="${id}"]`);
                             if (nameInput) {
-                                const row = nameInput.closest('.attr-row');
+                                const row = nameInput.closest('.attr-item');
                                 const valInput = row.querySelector('.attr-value');
                                 
                                 if (valInput.classList.contains('multi-checkbox-container')) {
@@ -979,7 +979,7 @@ async function openModal(summaryProduct) {
             };
             
             // Збираємо характеристики як масив об'єктів
-            document.querySelectorAll('.attr-row').forEach(row => {
+            document.querySelectorAll('.attr-item').forEach(row => {
                 const nameInput = row.querySelector('.attr-name');
                 const valInput = row.querySelector('.attr-value');
                 const unitSpan = row.querySelector('.attr-unit');
