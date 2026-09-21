@@ -491,18 +491,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentEditingProduct = product;
         
-        // Будуємо шлях категорії для контексту ШІ
-        let categoryPath = product.group ? product.group.name : 'Не вказано';
-        if (product.group && product.group.id && allGroupsMap[product.group.id]) {
-            const path = [];
-            let curr = allGroupsMap[product.group.id];
-            while (curr) {
-                path.unshift(curr.name);
-                curr = allGroupsMap[curr.parent_group_id || curr.parent_id];
-            }
-            categoryPath = path.join(' > ');
-        }
-        currentEditingProduct.categoryPath = categoryPath;
+        // Будуємо шлях категорії для контексту ШІ (ВИМКНЕНО за проханням користувача)
+        // let categoryPath = product.group ? product.group.name : 'Не вказано';
+        // if (product.group && product.group.id && allGroupsMap[product.group.id]) {
+        //     const path = [];
+        //     let curr = allGroupsMap[product.group.id];
+        //     while (curr) {
+        //         path.unshift(curr.name);
+        //         curr = allGroupsMap[curr.parent_group_id || curr.parent_id];
+        //     }
+        //     categoryPath = path.join(' > ');
+        // }
+        // currentEditingProduct.categoryPath = categoryPath;
+        currentEditingProduct.categoryPath = '';
         
         // Беремо українську версію, якщо є, інакше російську (дефолтну)
         const currentNameUk = (product.name_multilang && product.name_multilang.uk) ? product.name_multilang.uk : product.name || '';

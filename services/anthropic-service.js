@@ -73,21 +73,11 @@ class AnthropicService {
 У відповіді поверни ТІЛЬКИ текст назви, без лапок чи пояснень.`;
 
         try {
-            let msg;
-            try {
-                msg = await client.messages.create({
-                    model: "claude-3-haiku-20240307",
-                    max_tokens: 150,
-                    messages: [{ role: "user", content: prompt }]
-                });
-            } catch (haikuErr) {
-                console.warn('claude-3-haiku-20240307 failed, trying claude-3-5-haiku-20241022:', haikuErr.message);
-                msg = await client.messages.create({
-                    model: "claude-3-5-haiku-20241022",
-                    max_tokens: 150,
-                    messages: [{ role: "user", content: prompt }]
-                });
-            }
+            const msg = await client.messages.create({
+                model: "claude-3-haiku-20240307",
+                max_tokens: 150,
+                messages: [{ role: "user", content: prompt }]
+            });
             return msg.content[0].text.trim().replace(/^"|"$/g, '');
         } catch (error) {
             console.error('Anthropic generateTitle error:', error);
@@ -115,21 +105,11 @@ class AnthropicService {
 Поверни ТІЛЬКИ рядок з ключовими словами, без пояснень.`;
 
         try {
-            let msg;
-            try {
-                msg = await client.messages.create({
-                    model: "claude-3-haiku-20240307",
-                    max_tokens: 500,
-                    messages: [{ role: "user", content: prompt }]
-                });
-            } catch (haikuErr) {
-                console.warn('claude-3-haiku-20240307 failed, trying claude-3-5-haiku-20241022:', haikuErr.message);
-                msg = await client.messages.create({
-                    model: "claude-3-5-haiku-20241022",
-                    max_tokens: 500,
-                    messages: [{ role: "user", content: prompt }]
-                });
-            }
+            const msg = await client.messages.create({
+                model: "claude-3-haiku-20240307",
+                max_tokens: 500,
+                messages: [{ role: "user", content: prompt }]
+            });
             return msg.content[0].text.trim();
         } catch (error) {
             console.error('Anthropic generateKeywords error:', error);
@@ -169,28 +149,18 @@ class AnthropicService {
 Напиши опис ВИКЛЮЧНО українською мовою. Поверни ТІЛЬКИ HTML-код опису без додаткових пояснень.`;
 
         try {
-            let msg;
-            try {
-                msg = await client.messages.create({
-                    model: "claude-3-5-sonnet-20241022",
-                    max_tokens: 1500,
-                    messages: [{ role: "user", content: prompt }]
-                });
-            } catch (sonnetErr) {
-                console.warn('claude-3-5-sonnet-20241022 failed, trying claude-3-5-haiku-20241022:', sonnetErr.message);
-                msg = await client.messages.create({
-                    model: "claude-3-5-haiku-20241022",
-                    max_tokens: 1500,
-                    messages: [{ role: "user", content: prompt }]
-                });
-            }
+            const msg = await client.messages.create({
+                model: "claude-3-haiku-20240307",
+                max_tokens: 1500,
+                messages: [{ role: "user", content: prompt }]
+            });
             
             let html = msg.content[0].text.trim();
             // Очищення від маркдауну
-            if (html.startsWith('\`\`\`html')) {
-                html = html.replace(/^\`\`\`html/, '').replace(/\`\`\`$/, '');
-            } else if (html.startsWith('\`\`\`')) {
-                html = html.replace(/^\`\`\`/, '').replace(/\`\`\`$/, '');
+            if (html.startsWith('```html')) {
+                html = html.replace(/^```html/, '').replace(/```$/, '');
+            } else if (html.startsWith('```')) {
+                html = html.replace(/^```/, '').replace(/```$/, '');
             }
             return html.trim();
         } catch (error) {
@@ -234,7 +204,7 @@ class AnthropicService {
                 const client = this.getClient(apiKey);
                 const prompt = `Переклади наступний текст з української на російську мову. Збережи всі HTML-теги, структуру та форматування. Поверни ТІЛЬКИ перекладений текст без додаткових коментарів чи лапок:\n\n${text}`;
                 const msg = await client.messages.create({
-                    model: "claude-3-5-haiku-20241022",
+                    model: "claude-3-haiku-20240307",
                     max_tokens: 2000,
                     messages: [{ role: "user", content: prompt }]
                 });
