@@ -362,6 +362,7 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'product-card';
             card.style.position = 'relative';
             
+            const isInQueue = exportQueue.some(item => String(item['Ідентифікатор_товару']) === String(p.id));
             const badgeHtml = isInQueue ? `<div class="status-badge in-queue"><span>✓</span> В черзі</div>` : `<div></div>`; // empty div to keep flex space if needed, though justify-content handles it
             
             const aiStatusClass = isInQueue ? 'complete' : 'needs-review';
