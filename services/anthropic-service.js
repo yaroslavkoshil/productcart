@@ -34,7 +34,7 @@ class AnthropicService {
 
         try {
             const msg = await client.messages.create({
-                model: "claude-haiku-4-5-20251001",
+                model: "claude-3-5-haiku-20241022",
                 max_tokens: 150,
                 messages: [{ role: "user", content: prompt }]
             });
@@ -65,7 +65,7 @@ class AnthropicService {
 
         try {
             const msg = await client.messages.create({
-                model: "claude-haiku-4-5-20251001",
+                model: "claude-3-5-haiku-20241022",
                 max_tokens: 500,
                 messages: [{ role: "user", content: prompt }]
             });
@@ -97,7 +97,7 @@ class AnthropicService {
 
         try {
             const msg = await client.messages.create({
-                model: "claude-sonnet-4-5-20250929",
+                model: "claude-3-5-sonnet-20241022",
                 max_tokens: 1500,
                 messages: [{ role: "user", content: prompt }]
             });
@@ -137,7 +137,7 @@ ${text}
 
         try {
             const msg = await client.messages.create({
-                model: "claude-haiku-4-5-20251001",
+                model: "claude-3-5-haiku-20241022",
                 max_tokens: 1500,
                 messages: [{ role: "user", content: prompt }]
             });
