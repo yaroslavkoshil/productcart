@@ -119,14 +119,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Читаємо збережені стани з localStorage
-        const collapsedGroups = JSON.parse(localStorage.getItem('collapsedGroups') || '{}');
+        const expandedGroups = JSON.parse(localStorage.getItem('expandedGroups') || '{}');
         const lastGroupId = localStorage.getItem('lastGroupId') || 'all';
+        const lastSearchQuery = localStorage.getItem('lastSearchQuery') || '';
 
         groupsList.innerHTML = '';
 
         // Додаємо кнопку "Усі товари"
         const allDiv = document.createElement('div');
-        allDiv.className = 'group-item' + (lastGroupId === 'all' ? ' active' : '');
+        allDiv.className = 'group-item' + (lastGroupId === 'all' && !lastSearchQuery ? ' active' : '');
         allDiv.dataset.id = 'all';
         allDiv.textContent = 'Усі товари';
         allDiv.style.fontWeight = '500';
@@ -134,10 +135,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function renderNode(node, level = 0, container = groupsList) {
             const hasChildren = node.children && node.children.length > 0;
-            const isCollapsed = collapsedGroups[node.id] === true;
+            const isExpanded = expandedGroups[node.id] === true;
 
             const div = document.createElement('div');
-            div.className = 'group-item' + (String(node.id) === String(lastGroupId) ? ' active' : '');
+            div.className = 'group-item' + (String(node.id) === String(lastGroupId) && !lastSearchQuery ? ' active' : '');
             div.dataset.id = node.id;
             div.style.paddingLeft = `${14 + level * 18}px`;
 
@@ -145,7 +146,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Стрілка для згортання
                 const arrow = document.createElement('span');
                 arrow.className = 'group-arrow';
-                arrow.textContent = isCollapsed ? '▶ ' : '▼ ';
+                arrow.textContent = isExpanded ? '▼ ' : '▶ ';
                 arrow.dataset.toggleId = node.id;
                 div.appendChild(arrow);
                 
@@ -170,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (hasChildren) {
                 const childrenContainer = document.createElement('div');
                 childrenContainer.dataset.parentId = node.id;
-                childrenContainer.style.display = isCollapsed ? 'none' : 'block';
+                childrenContainer.style.display = isExpanded ? 'block' : 'none';
                 
                 // РЕКУРСІЯ: рендеримо дітей всередину цього контейнера
                 node.children.forEach(child => renderNode(child, level + 1, childrenContainer));
@@ -181,10 +182,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         rootGroups.forEach(g => renderNode(g, 0, groupsList));
 
-        // Відновлюємо останню вибрану групу і завантажуємо товари
-        currentGroupId = lastGroupId;
-        const promToken = localStorage.getItem('promToken');
-        loadProducts(promToken, lastGroupId, false);
+        // Відновлюємо останню вибрану групу або пошук
+        if (lastSearchQuery) {
+            searchInput.value = lastSearchQuery;
+            performGlobalSearch(lastSearchQuery);
+        } else {
+            currentGroupId = lastGroupId;
+            const promToken = localStorage.getItem('promToken');
+            loadProducts(promToken, lastGroupId, false);
+        }
     }
 
     // Обробник кліків по групах
@@ -194,18 +200,18 @@ document.addEventListener('DOMContentLoaded', () => {
         if (arrow) {
             const toggleId = arrow.dataset.toggleId;
             const container = groupsList.querySelector(`[data-parent-id="${toggleId}"]`);
-            const collapsedGroups = JSON.parse(localStorage.getItem('collapsedGroups') || '{}');
+            const expandedGroups = JSON.parse(localStorage.getItem('expandedGroups') || '{}');
 
             if (container.style.display === 'none') {
                 container.style.display = 'block';
                 arrow.textContent = '▼ ';
-                delete collapsedGroups[toggleId];
+                expandedGroups[toggleId] = true;
             } else {
                 container.style.display = 'none';
                 arrow.textContent = '▶ ';
-                collapsedGroups[toggleId] = true;
+                delete expandedGroups[toggleId];
             }
-            localStorage.setItem('collapsedGroups', JSON.stringify(collapsedGroups));
+            localStorage.setItem('expandedGroups', JSON.stringify(expandedGroups));
             return; // не завантажуємо товари
         }
 
@@ -217,7 +223,11 @@ document.addEventListener('DOMContentLoaded', () => {
         item.classList.add('active');
 
         currentGroupId = item.dataset.id;
-        localStorage.setItem('lastGroupId', currentGroupId); // запам’ятовуємо
+        
+        // Зберігаємо групу і скидаємо збережений пошук
+        localStorage.setItem('lastGroupId', currentGroupId);
+        localStorage.removeItem('lastSearchQuery');
+        searchInput.value = '';
 
         const promToken = localStorage.getItem('promToken');
         loadProducts(promToken, currentGroupId, false);
@@ -341,13 +351,17 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') performGlobalSearch();
     });
 
-    async function performGlobalSearch() {
-        const query = searchInput.value.trim();
+    async function performGlobalSearch(forceQuery = null) {
+        const query = forceQuery || searchInput.value.trim();
         if (!query) return;
 
         productsGrid.innerHTML = '<div class="loading">Шукаю по всьому магазину (це може зайняти час)...</div>';
         const loadMoreBtn = document.getElementById('load-more-btn');
         if(loadMoreBtn) loadMoreBtn.style.display = 'none';
+
+        // Зберігаємо стан пошуку
+        localStorage.setItem('lastSearchQuery', query);
+        localStorage.removeItem('lastGroupId');
 
         try {
             const token = localStorage.getItem('promToken');
