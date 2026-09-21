@@ -757,6 +757,9 @@ async function openModal(summaryProduct) {
                     btn.addEventListener('click', async () => {
                         const url = document.getElementById('cat-xml-input').value.trim();
                         if (!url) return alert('Вставте посилання!');
+                        if (!url.includes('hash_key=')) {
+                            return alert('❌ Помилка: Посилання повинно містити "hash_key=" в кінці! Згенеруйте правильне посилання в кабінеті Prom.ua (кнопка Експорт -> Згенерувати посилання).');
+                        }
                         btn.disabled = true;
                         btn.textContent = 'Завантажую...';
                         try {
