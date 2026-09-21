@@ -889,7 +889,7 @@ async function openModal(summaryProduct) {
                                 }
                             }
                         });
-                        alert('Характеристики успішно згенеровані та підставлені!');
+                        console.log('Характеристики успішно згенеровані та підставлені!');
                     }
                 }
                 updateCounters();
