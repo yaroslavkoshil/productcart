@@ -100,25 +100,59 @@
                     <div class="data-group">
                         <div class="label-with-action">
                             <label>Нова Назва (до 110 симв.):</label>
-                            <button class="btn secondary small gen-btn" data-type="title">✨ Згенерувати</button>
+                            <div>
+                                <button class="btn icon-btn copy-btn" data-target="name" title="Копіювати з поточних">📋</button>
+                                <button class="btn secondary small gen-btn" data-type="title">✨ Згенерувати</button>
+                            </div>
                         </div>
-                        <input type="text" id="ai-name" class="edit-input" maxlength="110">
+                        <div class="lang-field">
+                            <span class="lang-badge">UK</span>
+                            <input type="text" id="ai-name-uk" class="edit-input" maxlength="110">
+                            <span class="char-counter" id="count-name-uk">0/110</span>
+                        </div>
+                        <div class="lang-field mt-2">
+                            <span class="lang-badge">RU</span>
+                            <input type="text" id="ai-name-ru" class="edit-input" maxlength="110">
+                            <span class="char-counter" id="count-name-ru">0/110</span>
+                        </div>
                     </div>
 
                     <div class="data-group">
                         <div class="label-with-action">
                             <label>Нові Ключові слова:</label>
-                            <button class="btn secondary small gen-btn" data-type="keywords">✨ Згенерувати</button>
+                            <div>
+                                <button class="btn icon-btn copy-btn" data-target="keywords" title="Копіювати з поточних">📋</button>
+                                <button class="btn secondary small gen-btn" data-type="keywords">✨ Згенерувати</button>
+                            </div>
                         </div>
-                        <textarea id="ai-keywords" class="edit-input" rows="3"></textarea>
+                        <div class="lang-field">
+                            <span class="lang-badge">UK</span>
+                            <textarea id="ai-keywords-uk" class="edit-input" rows="3"></textarea>
+                            <span class="char-counter" id="count-keywords-uk">0/1024</span>
+                        </div>
+                        <div class="lang-field mt-2">
+                            <span class="lang-badge">RU</span>
+                            <textarea id="ai-keywords-ru" class="edit-input" rows="3"></textarea>
+                            <span class="char-counter" id="count-keywords-ru">0/1024</span>
+                        </div>
                     </div>
 
                     <div class="data-group">
                         <div class="label-with-action">
                             <label>Новий HTML Опис:</label>
-                            <button class="btn secondary small gen-btn" data-type="description">✨ Згенерувати</button>
+                            <div>
+                                <button class="btn icon-btn copy-btn" data-target="description" title="Копіювати з поточних">📋</button>
+                                <button class="btn secondary small gen-btn" data-type="description">✨ Згенерувати</button>
+                            </div>
                         </div>
-                        <textarea id="ai-desc" class="edit-input desc-input" rows="10"></textarea>
+                        <div class="lang-field">
+                            <span class="lang-badge">UK</span>
+                            <textarea id="ai-desc-uk" class="edit-input desc-input" rows="6"></textarea>
+                        </div>
+                        <div class="lang-field mt-2">
+                            <span class="lang-badge">RU</span>
+                            <textarea id="ai-desc-ru" class="edit-input desc-input" rows="6"></textarea>
+                        </div>
                     </div>
                 </div>
             </div>

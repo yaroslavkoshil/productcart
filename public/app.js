@@ -356,22 +356,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentEditingProduct = product;
         
-        // Беремо українську версію, якщо є, інакше російську (дефолтну)
-        const currentName = (product.name_multilang && product.name_multilang.uk) ? product.name_multilang.uk : product.name || '';
-        const currentDesc = (product.description_multilang && product.description_multilang.uk) ? product.description_multilang.uk : product.description || '';
-        const currentKeywords = product.keywords_uk || product.keywords || '';
+        // Будуємо шлях категорії для контексту ШІ
+        let categoryPath = product.group ? product.group.name : 'Не вказано';
+        if (product.group && product.group.id && allGroupsMap[product.group.id]) {
+            const path = [];
+            let curr = allGroupsMap[product.group.id];
+            while (curr) {
+                path.unshift(curr.name);
+                curr = allGroupsMap[curr.parent_group_id || curr.parent_id];
+            }
+            categoryPath = path.join(' > ');
+        }
+        currentEditingProduct.categoryPath = categoryPath;
         
-        document.getElementById('modal-title').textContent = `Редагування: ${currentName}`;
+        // Беремо українську версію, якщо є, інакше російську (дефолтну)
+        const currentNameUk = (product.name_multilang && product.name_multilang.uk) ? product.name_multilang.uk : product.name || '';
+        const currentNameRu = (product.name_multilang && product.name_multilang.ru) ? product.name_multilang.ru : product.name || '';
+        const currentDescUk = (product.description_multilang && product.description_multilang.uk) ? product.description_multilang.uk : product.description || '';
+        const currentDescRu = (product.description_multilang && product.description_multilang.ru) ? product.description_multilang.ru : product.description || '';
+        
+        // Ключові слова (на Prom.ua вони спільні, але для зручності ми їх ділимо якщо можна)
+        const currentKeywords = product.keywords || '';
+        
+        document.getElementById('modal-title').textContent = `Редагування: ${currentNameUk}`;
         document.getElementById('modal-img').src = product.main_image || summaryProduct.main_image || 'https://via.placeholder.com/250';
         
-        document.getElementById('current-name').textContent = currentName || 'Немає';
+        document.getElementById('current-name').textContent = currentNameUk || 'Немає';
         document.getElementById('current-keywords').textContent = currentKeywords || 'Немає';
-        document.getElementById('current-desc').innerHTML = currentDesc || 'Немає';
+        document.getElementById('current-desc').innerHTML = currentDescUk || 'Немає';
+
+        // Зберігаємо поточні дані в data-атрибути для кнопок "Копіювати"
+        document.querySelector('.copy-btn[data-target="name"]').dataset.uk = currentNameUk;
+        document.querySelector('.copy-btn[data-target="name"]').dataset.ru = currentNameRu;
+        document.querySelector('.copy-btn[data-target="keywords"]').dataset.uk = currentKeywords;
+        document.querySelector('.copy-btn[data-target="keywords"]').dataset.ru = currentKeywords;
+        document.querySelector('.copy-btn[data-target="description"]').dataset.uk = currentDescUk;
+        document.querySelector('.copy-btn[data-target="description"]').dataset.ru = currentDescRu;
 
         // Очищаємо поля для нових значень
-        document.getElementById('ai-name').value = currentName;
-        document.getElementById('ai-keywords').value = currentKeywords;
-        document.getElementById('ai-desc').value = currentDesc;
+        document.getElementById('ai-name-uk').value = currentNameUk;
+        document.getElementById('ai-name-ru').value = currentNameRu;
+        document.getElementById('ai-keywords-uk').value = currentKeywords;
+        document.getElementById('ai-keywords-ru').value = currentKeywords;
+        document.getElementById('ai-desc-uk').value = currentDescUk;
+        document.getElementById('ai-desc-ru').value = currentDescRu;
+        
+        updateCounters();
         
         document.getElementById('save-status').textContent = '';
         document.getElementById('save-status').className = 'status-msg';
@@ -407,10 +437,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!response.ok) throw new Error('Помилка ШІ');
                 const data = await response.json();
+                const jsonRes = data.result; // JSON object: { uk: "...", ru: "..." }
 
-                if (type === 'title') document.getElementById('ai-name').value = data.result;
-                if (type === 'keywords') document.getElementById('ai-keywords').value = data.result;
-                if (type === 'description') document.getElementById('ai-desc').value = data.result;
+                if (type === 'title') {
+                    document.getElementById('ai-name-uk').value = jsonRes.uk || '';
+                    document.getElementById('ai-name-ru').value = jsonRes.ru || '';
+                }
+                if (type === 'keywords') {
+                    document.getElementById('ai-keywords-uk').value = jsonRes.uk || '';
+                    document.getElementById('ai-keywords-ru').value = jsonRes.ru || '';
+                }
+                if (type === 'description') {
+                    document.getElementById('ai-desc-uk').value = jsonRes.uk || '';
+                    document.getElementById('ai-desc-ru').value = jsonRes.ru || '';
+                }
+                updateCounters();
 
             } catch (error) {
                 alert(error.message);
@@ -433,19 +474,34 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const promToken = localStorage.getItem('promToken');
             
+            const nameUk = document.getElementById('ai-name-uk').value.trim();
+            const nameRu = document.getElementById('ai-name-ru').value.trim();
+            const descUk = document.getElementById('ai-desc-uk').value.trim();
+            const descRu = document.getElementById('ai-desc-ru').value.trim();
+            const keywordsUk = document.getElementById('ai-keywords-uk').value.trim();
+            const keywordsRu = document.getElementById('ai-keywords-ru').value.trim();
+
             const updatedProduct = {
                 id: currentEditingProduct.id,
-                name: currentEditingProduct.name,
-                keywords: currentEditingProduct.keywords,
-                description: currentEditingProduct.description,
+                name: nameUk || currentEditingProduct.name, // дефолт для базового поля
+                keywords: keywordsUk || currentEditingProduct.keywords, // базова мова - укр
+                description: descUk || currentEditingProduct.description,
                 name_multilang: {
-                    ru: currentEditingProduct.name,
-                    uk: document.getElementById('ai-name').value.trim()
+                    ru: nameRu,
+                    uk: nameUk
                 },
                 description_multilang: {
-                    ru: currentEditingProduct.description,
-                    uk: document.getElementById('ai-desc').value.trim()
+                    ru: descRu,
+                    uk: descUk
                 }
+            };
+            
+            const translationData = {
+                product_id: currentEditingProduct.id.toString(),
+                lang: 'ru',
+                name: nameRu,
+                keywords: keywordsRu,
+                description: descRu
             };
 
             const response = await fetch(`${API_BASE}/save`, {
@@ -454,7 +510,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     'Content-Type': 'application/json',
                     'x-prom-token': promToken
                 },
-                body: JSON.stringify(updatedProduct)
+                body: JSON.stringify({ productData: updatedProduct, translationData: translationData })
             });
 
             if (!response.ok) {
@@ -480,5 +536,50 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.disabled = false;
             btn.textContent = '💾 Зберегти на Prom.ua';
         }
+    });
+
+    // Оновлення лічильників символів
+    function updateCounters() {
+        const updateCount = (inputId, counterId, limit) => {
+            const input = document.getElementById(inputId);
+            const counter = document.getElementById(counterId);
+            if (input && counter) {
+                const len = input.value.length;
+                counter.textContent = `${len}/${limit}`;
+                if (len > limit) counter.classList.add('error');
+                else counter.classList.remove('error');
+            }
+        };
+
+        updateCount('ai-name-uk', 'count-name-uk', 110);
+        updateCount('ai-name-ru', 'count-name-ru', 110);
+        updateCount('ai-keywords-uk', 'count-keywords-uk', 1024);
+        updateCount('ai-keywords-ru', 'count-keywords-ru', 1024);
+    }
+
+    ['ai-name-uk', 'ai-name-ru', 'ai-keywords-uk', 'ai-keywords-ru'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateCounters);
+    });
+
+    // Кнопки "Копіювати з поточних"
+    document.querySelectorAll('.copy-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const target = e.currentTarget.dataset.target;
+            const ukVal = e.currentTarget.dataset.uk || '';
+            const ruVal = e.currentTarget.dataset.ru || '';
+            
+            if (target === 'name') {
+                document.getElementById('ai-name-uk').value = ukVal;
+                document.getElementById('ai-name-ru').value = ruVal;
+            } else if (target === 'keywords') {
+                document.getElementById('ai-keywords-uk').value = ukVal;
+                document.getElementById('ai-keywords-ru').value = ruVal;
+            } else if (target === 'description') {
+                document.getElementById('ai-desc-uk').value = ukVal;
+                document.getElementById('ai-desc-ru').value = ruVal;
+            }
+            updateCounters();
+        });
     });
 });

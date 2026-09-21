@@ -97,6 +97,21 @@ class PromApiService {
             throw new Error(error.response?.data?.message || 'Помилка при оновленні товару');
         }
     }
+
+    /**
+     * Оновлює переклад товару (наприклад, ключові слова російською)
+     */
+    async updateProductTranslation(token, translationData) {
+        try {
+            const client = this.getClient(token);
+            // PUT /products/translation
+            const response = await client.put('/products/translation', translationData);
+            return response.data;
+        } catch (error) {
+            console.error('Prom API updateTranslation error:', error.response?.data || error.message);
+            throw new Error(error.response?.data?.message || 'Помилка при збереженні перекладу товару');
+        }
+    }
 }
 
 module.exports = new PromApiService();

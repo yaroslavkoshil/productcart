@@ -90,15 +90,21 @@ app.post('/api/generate', async (req, res) => {
     }
 });
 
-// 5. Зберегти зміни на Prom.ua
 app.post('/api/save', async (req, res) => {
     try {
         const promToken = req.headers['x-prom-token'];
         if (!promToken) return res.status(401).json({ error: 'Prom токен не надано' });
 
-        const productData = req.body; // { id, name, description, keywords, ... }
+        const { productData, translationData } = req.body;
         
+        // 1. Оновлюємо основні дані (УКР)
         const data = await promApi.editProduct(promToken, productData);
+
+        // 2. Оновлюємо переклад (РУС) якщо є
+        if (translationData) {
+            await promApi.updateProductTranslation(promToken, translationData);
+        }
+
         res.json(data);
     } catch (error) {
         res.status(500).json({ error: error.message });
