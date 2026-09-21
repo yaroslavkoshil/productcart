@@ -161,6 +161,8 @@ app.post('/api/save', async (req, res) => {
 });
 
 // Додавання нової категорії через XML посилання
+const { exec } = require('child_process');
+
 app.post('/api/add-category', async (req, res) => {
     try {
         const { url } = req.body;
@@ -224,6 +226,17 @@ app.post('/api/add-category', async (req, res) => {
         }
 
         fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
+        
+        // Автоматично відправляємо зміни на GitHub
+        exec('git add public/data/attributes.json && git commit -m "Auto-update attributes.json via UI" && git push', (error, stdout, stderr) => {
+            if (error) {
+                console.error('Git push error:', error.message);
+                // Ми не кидаємо помилку клієнту, бо локально файл вже збережено
+            } else {
+                console.log('Successfully pushed attributes to GitHub');
+            }
+        });
+
         res.json({ success: true, addedCount });
 
     } catch (error) {
