@@ -30,6 +30,10 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Черга для XLSX експорту
     let exportQueue = [];
+    try {
+        const savedQueue = localStorage.getItem('promExportQueue');
+        if (savedQueue) exportQueue = JSON.parse(savedQueue);
+    } catch(e) {}
     
     // Завантажуємо базу характеристик Прому
     let promAttributesDb = {};
@@ -46,6 +50,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (savedProm && savedAnthropic) {
         connectToApi(savedProm, savedAnthropic);
+    }
+    
+    // Якщо в черзі вже є товари після перезавантаження, показуємо віджет
+    if (exportQueue.length > 0) {
+        document.getElementById('export-widget').style.display = 'flex';
+        document.getElementById('export-count').textContent = `В черзі: ${exportQueue.length} товарів`;
     }
 
     connectBtn.addEventListener('click', () => {
@@ -936,6 +946,9 @@ async function openModal(summaryProduct) {
                 exportQueue.push(exportItem);
             }
             
+            // Зберігаємо чергу в LocalStorage, щоб не зникала після оновлення
+            localStorage.setItem('promExportQueue', JSON.stringify(exportQueue));
+            
             // Оновлюємо UI
             document.getElementById('export-widget').style.display = 'flex';
             document.getElementById('export-count').textContent = `В черзі: ${exportQueue.length} товарів`;
@@ -1088,4 +1101,17 @@ async function openModal(summaryProduct) {
             updateCounters();
         });
     });
+    
+    // Кнопка очищення черги
+    const clearBtn = document.getElementById('clear-xlsx-btn');
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (confirm('Ви дійсно хочете очистити чергу товарів для XLSX? Всі зібрані товари буде видалено.')) {
+                exportQueue = [];
+                localStorage.removeItem('promExportQueue');
+                document.getElementById('export-widget').style.display = 'none';
+                document.getElementById('export-count').textContent = `В черзі: 0 товарів`;
+            }
+        });
+    }
 });
