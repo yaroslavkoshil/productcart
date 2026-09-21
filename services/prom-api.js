@@ -3,6 +3,50 @@ const axios = require('axios');
 class PromApiService {
     constructor() {
         this.baseURL = 'https://my.prom.ua/api/v1';
+        this.cache = {}; // Зберігаємо товари по токенам
+    }
+
+    /**
+     * Фонове завантаження всіх товарів в пам'ять
+     */
+    async syncAllProducts(token) {
+        if (this.cache[token] && this.cache[token].isSyncing) return;
+        
+        if (!this.cache[token]) {
+            this.cache[token] = { products: [], isSyncing: true, lastSynced: 0 };
+        } else {
+            this.cache[token].isSyncing = true;
+        }
+
+        try {
+            console.log('[Cache] Базове завантаження товарів розпочато...');
+            const client = this.getClient(token);
+            let allProducts = [];
+            let lastId = null;
+            const limit = 100;
+            
+            while (true) {
+                let url = `/products/list?limit=${limit}`;
+                if (lastId) url += `&last_id=${lastId}`;
+                
+                const response = await client.get(url);
+                const products = response.data.products || [];
+                if (products.length === 0) break;
+                
+                allProducts = allProducts.concat(products);
+                if (products.length < limit) break;
+                
+                lastId = products[products.length - 1].id;
+            }
+            
+            this.cache[token].products = allProducts;
+            this.cache[token].lastSynced = Date.now();
+            console.log(`[Cache] Успішно завантажено ${allProducts.length} товарів. Пошук тепер працює моментально.`);
+        } catch(e) {
+            console.error('[Cache] Помилка фонового завантаження:', e.message);
+        } finally {
+            this.cache[token].isSyncing = false;
+        }
     }
 
     /**
@@ -61,6 +105,20 @@ class PromApiService {
         const lowerQuery = query.toLowerCase().trim();
         const isNumeric = /^\d+$/.test(lowerQuery);
         
+        // 1. Моментальний пошук по кешу (якщо він вже завантажений)
+        if (this.cache[token] && this.cache[token].products && this.cache[token].products.length > 0) {
+            console.log('[Cache] Використовую миттєвий пошук по пам\'яті');
+            const results = this.cache[token].products.filter(p => {
+                const nameRu = (p.name || '').toLowerCase();
+                const nameUk = (p.name_multilang && p.name_multilang.uk ? p.name_multilang.uk : '').toLowerCase();
+                const sku = (p.sku || '').toLowerCase();
+                const idStr = p.id.toString();
+                return nameRu.includes(lowerQuery) || nameUk.includes(lowerQuery) || sku.includes(lowerQuery) || idStr === lowerQuery;
+            });
+            return { products: results.slice(0, 50) };
+        }
+        
+        // 2. Якщо кешу ще немає - працюємо по старому алгоритму API
         let results = [];
 
         // 1. Якщо це число, пробуємо знайти по ID
@@ -120,6 +178,11 @@ class PromApiService {
      * Отримує список груп (категорій) - всі сторінки автоматично
      */
     async getGroups(token) {
+        // Тригеримо фонове завантаження товарів для кешу (fire and forget)
+        if (!this.cache[token] || (!this.cache[token].isSyncing && Date.now() - this.cache[token].lastSynced > 1000 * 60 * 60)) {
+            this.syncAllProducts(token);
+        }
+        
         try {
             const client = this.getClient(token);
             let allGroups = [];
@@ -154,6 +217,15 @@ class PromApiService {
             const client = this.getClient(token);
             // Prom API expecting array of objects for edit
             const response = await client.post('/products/edit', [productData]);
+            
+            // Оновлюємо кеш, щоб пошук знаходив нові дані
+            if (this.cache[token] && this.cache[token].products) {
+                const idx = this.cache[token].products.findIndex(p => p.id === productData.id);
+                if (idx !== -1) {
+                    this.cache[token].products[idx] = { ...this.cache[token].products[idx], ...productData };
+                }
+            }
+            
             return response.data;
         } catch (error) {
             console.error('Prom API editProduct error:', error.response?.data || error.message);
