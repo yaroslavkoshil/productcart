@@ -891,8 +891,20 @@ async function openModal(summaryProduct) {
 
             const isBaseRu = currentEditingProduct.name_multilang && currentEditingProduct.name_multilang.uk !== undefined;
 
-            // Збираємо характеристики у формат Prom.ua (Назва: Значення; Назва2: Значення2)
-            let characteristicsArr = [];
+            // Формуємо об'єкт для XLSX з правильними назвами колонок
+            const exportItem = {
+                'Ідентифікатор_товару': currentEditingProduct.id,
+                'Код_товару': newSku || currentEditingProduct.sku || '',
+                'Назва_позиції': nameRu,
+                'Назва_позиції_укр': nameUk,
+                'Опис': descRu,
+                'Опис_укр': descUk,
+                'Пошукові_запити': keywordsRu,
+                'Пошукові_запити_укр': keywordsUk,
+                '_attributes': [] // тимчасове поле для характеристик
+            };
+            
+            // Збираємо характеристики як масив об'єктів
             document.querySelectorAll('.attr-row').forEach(row => {
                 const nameInput = row.querySelector('.attr-name');
                 const valInput = row.querySelector('.attr-value');
@@ -909,29 +921,12 @@ async function openModal(summaryProduct) {
                 }
                 
                 if (name && value) {
-                    characteristicsArr.push(`${name}: ${value}`);
+                    exportItem._attributes.push({ name, value });
                 }
             });
-            const characteristicsStr = characteristicsArr.join('; ');
-
-            if (keywordsUk.length > 1024) keywordsUk = keywordsUk.substring(0, 1024);
-            if (keywordsRu.length > 1024) keywordsRu = keywordsRu.substring(0, 1024);
-
-            // Формуємо об'єкт для XLSX
-            const exportItem = {
-                'Номер_товара': currentEditingProduct.id,
-                'Артикул': newSku || currentEditingProduct.sku || '',
-                'Название_укр': nameUk,
-                'Название_рус': nameRu,
-                'Описание_укр': descUk,
-                'Описание_рус': descRu,
-                'Ключевые_слова_укр': keywordsUk,
-                'Ключевые_слова_рус': keywordsRu,
-                'Характеристики': characteristicsStr
-            };
 
             // Додаємо в чергу (якщо вже є такий ID - замінюємо)
-            const existingIdx = exportQueue.findIndex(item => item['Номер_товара'] === exportItem['Номер_товара']);
+            const existingIdx = exportQueue.findIndex(item => item['Ідентифікатор_товару'] === exportItem['Ідентифікатор_товару']);
             if (existingIdx >= 0) {
                 exportQueue[existingIdx] = exportItem;
             } else {
@@ -963,12 +958,68 @@ async function openModal(summaryProduct) {
         if (exportQueue.length === 0) return;
         
         try {
-            // Створюємо книгу та аркуш
-            const worksheet = XLSX.utils.json_to_sheet(exportQueue);
+            // 1. Знаходимо максимальну кількість характеристик серед усіх товарів
+            let maxAttrs = 0;
+            exportQueue.forEach(item => {
+                if (item._attributes && item._attributes.length > maxAttrs) {
+                    maxAttrs = item._attributes.length;
+                }
+            });
+
+            // 2. Формуємо масив заголовків
+            const headers = [
+                'Ідентифікатор_товару',
+                'Код_товару',
+                'Назва_позиції',
+                'Назва_позиції_укр',
+                'Опис',
+                'Опис_укр',
+                'Пошукові_запити',
+                'Пошукові_запити_укр'
+            ];
+            
+            // Додаємо потрібну кількість трійок колонок для характеристик
+            for (let i = 0; i < maxAttrs; i++) {
+                headers.push('Назва_Характеристики');
+                headers.push('Одиниця_виміру_Характеристики');
+                headers.push('Значення_Характеристики');
+            }
+            
+            const aoa = [headers]; // Array of arrays для XLSX
+
+            // 3. Формуємо рядки з даними
+            exportQueue.forEach(item => {
+                const row = [
+                    item['Ідентифікатор_товару'],
+                    item['Код_товару'],
+                    item['Назва_позиції'],
+                    item['Назва_позиції_укр'],
+                    item['Опис'],
+                    item['Опис_укр'],
+                    item['Пошукові_запити'],
+                    item['Пошукові_запити_укр']
+                ];
+                
+                for (let i = 0; i < maxAttrs; i++) {
+                    if (item._attributes && item._attributes[i]) {
+                        row.push(item._attributes[i].name);
+                        row.push(''); // Одиниця виміру (порожня, бо ми її не генеруємо)
+                        row.push(item._attributes[i].value);
+                    } else {
+                        // Якщо у цього товару менше характеристик, заповнюємо порожнечею
+                        row.push('', '', '');
+                    }
+                }
+                
+                aoa.push(row);
+            });
+
+            // 4. Створюємо книгу та аркуш з формату AoA
+            const worksheet = XLSX.utils.aoa_to_sheet(aoa);
             const workbook = XLSX.utils.book_new();
             XLSX.utils.book_append_sheet(workbook, worksheet, "Export");
             
-            // Завантажуємо файл
+            // 5. Завантажуємо файл
             const dateStr = new Date().toISOString().split('T')[0];
             XLSX.writeFile(workbook, `prom_export_${dateStr}.xlsx`);
             
