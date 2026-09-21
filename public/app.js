@@ -417,7 +417,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Глобальний пошук по всьому магазину
-    document.getElementById('search-btn').addEventListener('click', () => performGlobalSearch());
+    const searchBtn = document.getElementById('search-btn');
+    if (searchBtn) searchBtn.addEventListener('click', () => performGlobalSearch());
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') performGlobalSearch();
     });
