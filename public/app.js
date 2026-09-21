@@ -474,7 +474,7 @@ function createAttributeRow(name = '', value = '', id = '', schema = null) {
                     checkboxesHtml += `<label style="display: block; margin-bottom: 4px; font-size: 0.9em;"><input type="checkbox" value="${v}" ${checked}> ${v}</label>`;
                 });
                 
-                valueInputHtml = `<div class="attr-value multi-checkbox-container" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px; max-height: 80px; overflow-y: auto; background: #fff;">${checkboxesHtml}</div>`;
+                valueInputHtml = `<div class="attr-value multi-checkbox-container" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px; max-height: 250px; overflow-y: auto; background: #fff;">${checkboxesHtml}</div>`;
             } else {
                 // Звичайний випадаючий список
                 let options = `<option value="">-- Оберіть --</option>`;

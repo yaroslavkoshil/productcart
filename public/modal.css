@@ -14,9 +14,9 @@
 
 .modal-content {
     background-color: var(--bg-color);
-    margin: 3% auto;
-    width: 90%;
-    max-width: 1200px;
+    margin: 2% auto;
+    width: 98%;
+    max-width: 1600px;
     position: relative;
     display: flex;
     flex-direction: column;
