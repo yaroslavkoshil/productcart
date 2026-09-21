@@ -1,4 +1,5 @@
-const Anthropic = require('@anthropic-ai/sdk');
+const { Anthropic } = require('@anthropic-ai/sdk');
+const axios = require('axios');
 
 class AnthropicService {
     /**
@@ -121,37 +122,18 @@ class AnthropicService {
      * Перекладає текст на російську мову
      */
     async translateText(apiKey, text, type) {
-        const client = this.getClient(apiKey);
-        
-        let extraInstructions = "";
-        if (type === "title") extraInstructions = "Обмеження 110 символів. Тільки текст.";
-        else if (type === "keywords") extraInstructions = "Збережи розділення комою. Переклади всі ключі максимально точно і релевантно для пошуку. Тільки текст.";
-        else if (type === "description") extraInstructions = "Збережи всі HTML теги без змін. Переклади тільки текстовий вміст. Поверни тільки HTML код.";
-
-        const prompt = `Переклади наступний текст з української на російську мову для інтернет-магазину.
-Додаткові інструкції: ${extraInstructions}
-
-Текст для перекладу:
-${text}
-
-Поверни ТІЛЬКИ перекладений текст без лапок чи пояснень.`;
-
+        // Використовуємо безкоштовний Google Translate API для надійності та швидкості
         try {
-            const msg = await client.messages.create({
-                model: "claude-3-haiku-20240307",
-                max_tokens: 1500,
-                messages: [{ role: "user", content: prompt }]
-            });
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=uk&tl=ru&dt=t&q=${encodeURIComponent(text)}`;
+            const response = await axios.get(url);
+            const data = response.data;
             
-            let result = msg.content[0].text.trim();
-            if (type === 'description') {
-                if (result.startsWith('\`\`\`html')) result = result.replace(/^\`\`\`html/, '').replace(/\`\`\`$/, '');
-                else if (result.startsWith('\`\`\`')) result = result.replace(/^\`\`\`/, '').replace(/\`\`\`$/, '');
-            }
-            return result.trim().replace(/^"|"$/g, '');
+            // Збираємо всі частини перекладу до купи
+            const translated = data[0].map(part => part[0]).join('');
+            return translated;
         } catch (error) {
-            console.error('Anthropic translate error:', error);
-            throw new Error('Помилка перекладу ШІ (Anthropic)');
+            console.error('Translation error:', error.message);
+            throw new Error('Помилка перекладу (Google)');
         }
     }
 }
