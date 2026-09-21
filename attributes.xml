@@ -1,0 +1,236 @@
+<?xml version="1.0" encoding="utf-8"?>
+<categories>
+  <category id="330701" nameRU="Шампуни для волос" nameUK="Шампуні для волосся">
+    <attribute id="5" nameRU="Вес" type="real" nameUK="Вага" measureUnitRU="г" min="0" max="2000" measureUnitUK="г"/>
+    <attribute id="128" nameRU="Объем" type="real" nameUK="Об`єм" measureUnitRU="мл" min="0" max="10000" measureUnitUK="мл"/>
+    <attribute id="1315" nameRU="Пол" type="singleselect" nameUK="Стать">
+      <attribute_value id="21053" nameRU="Унисекс" nameUK="Унісекс"/>
+      <attribute_value id="70329" nameRU="Женский" nameUK="Жіноча"/>
+      <attribute_value id="70330" nameRU="Мужской" nameUK="Чоловіча"/>
+    </attribute>
+    <attribute id="3230" nameRU="Классификация косметического средства" type="singleselect" nameUK="Класифікація косметичного засобу">
+      <attribute_value id="21596" nameRU="Лечебная (Космецевтика)" nameUK="Лікувальна (Космецевтика)"/>
+      <attribute_value id="21597" nameRU="Масс маркет" nameUK="Мас маркет"/>
+      <attribute_value id="21598" nameRU="Мидл маркет" nameUK="Мідл-маркет"/>
+      <attribute_value id="21599" nameRU="Органическая" nameUK="Органічна"/>
+      <attribute_value id="21601" nameRU="Селективная" nameUK="Селективна"/>
+      <attribute_value id="273840" nameRU="Натуральная" nameUK="Натуральна"/>
+    </attribute>
+    <attribute id="3770" nameRU="Гипоаллергенно" type="bool" nameUK="Гіпоалергенний"/>
+    <attribute id="3830" nameRU="Тип волос" type="multiselect" nameUK="Тип волосся">
+      <attribute_value id="25129" nameRU="Нормальные" nameUK="Нормальні"/>
+      <attribute_value id="25130" nameRU="Сухие" nameUK="Сухі"/>
+      <attribute_value id="25131" nameRU="Жирные" nameUK="Жирні"/>
+      <attribute_value id="25132" nameRU="Комбинированные" nameUK="Комбіновані"/>
+      <attribute_value id="25133" nameRU="Поврежденные" nameUK="Пошкоджені"/>
+      <attribute_value id="25134" nameRU="Ослабленные" nameUK="Ослаблені"/>
+      <attribute_value id="25135" nameRU="Ломкие" nameUK="Ламке"/>
+      <attribute_value id="25136" nameRU="Склонные к выпадению" nameUK="Схильні до випадання"/>
+      <attribute_value id="25137" nameRU="Вьющиеся" nameUK="В'юнкі"/>
+      <attribute_value id="25138" nameRU="Кудрявые" nameUK="Кучеряві"/>
+      <attribute_value id="25139" nameRU="Прямые" nameUK="Прямі"/>
+      <attribute_value id="25140" nameRU="Непослушные" nameUK="Неслухняне"/>
+      <attribute_value id="25141" nameRU="Тонкие" nameUK="Тонкі"/>
+      <attribute_value id="25142" nameRU="Толстые" nameUK="Товсті"/>
+      <attribute_value id="25143" nameRU="Окрашенные" nameUK="Забарвлені"/>
+      <attribute_value id="25144" nameRU="Химическая завивка" nameUK="Хімічна завивка"/>
+      <attribute_value id="25145" nameRU="Густые" nameUK="Густі"/>
+      <attribute_value id="25146" nameRU="Натуральные" nameUK="Натуральне"/>
+      <attribute_value id="25147" nameRU="Светлые" nameUK="Світлі"/>
+      <attribute_value id="25148" nameRU="Мелированные" nameUK="Меліровані"/>
+      <attribute_value id="25149" nameRU="Все типы волос" nameUK="Всі типи волосся"/>
+      <attribute_value id="25320" nameRU="Возрастные" nameUK="Вікові"/>
+      <attribute_value id="25993" nameRU="Седые" nameUK="Сиві"/>
+      <attribute_value id="28459" nameRU="Жесткие" nameUK="Жорсткі"/>
+      <attribute_value id="29165" nameRU="Осветленные" nameUK="Освітлені "/>
+      <attribute_value id="245699" nameRU="Пористые" nameUK="Пористі"/>
+      <attribute_value id="246134" nameRU="Тусклые" nameUK="Тьмяні"/>
+      <attribute_value id="306015" nameRU="Химически обработанные и выпрямленные волосы" nameUK="Хімічно оброблене та випрямлене волосся"/>
+      <attribute_value id="348325" nameRU="Длинные" nameUK="Довгі"/>
+    </attribute>
+    <attribute id="3855" nameRU="Тип кожи головы" type="multiselect" nameUK="Тип шкіри голови">
+      <attribute_value id="25187" nameRU="Нормальная" nameUK="Нормальна"/>
+      <attribute_value id="25188" nameRU="Сухая" nameUK="Суха"/>
+      <attribute_value id="25189" nameRU="Чувствительная" nameUK="Чутлива"/>
+      <attribute_value id="25190" nameRU="Жирная" nameUK="Жирна"/>
+      <attribute_value id="25191" nameRU="Проблемная" nameUK="Проблемна"/>
+      <attribute_value id="25192" nameRU="Все типы кожи" nameUK="Всі типи шкіри"/>
+    </attribute>
+    <attribute id="3872" nameRU="Тип шампуня" type="singleselect" nameUK="Тип шампуню">
+      <attribute_value id="25226" nameRU="Для ежедневного использования" nameUK="Для щоденного використання"/>
+      <attribute_value id="25227" nameRU="Сухой шампунь" nameUK="Сухий шампунь"/>
+      <attribute_value id="25228" nameRU="Для нормальных волос" nameUK="Для нормального волосся"/>
+      <attribute_value id="25229" nameRU="Для окрашенных волос" nameUK="Для фарбованого волосся"/>
+      <attribute_value id="25230" nameRU="Для поврежденных волос" nameUK="Для пошкодженого волосся"/>
+      <attribute_value id="25231" nameRU="Увлажняющий" nameUK="Зволожуючий"/>
+      <attribute_value id="25232" nameRU="Лечебный" nameUK="Лікувальний"/>
+      <attribute_value id="25233" nameRU="Для тонких волос (для придания объема)" nameUK="Для тонкого волосся (для надання обʼєму)"/>
+      <attribute_value id="25234" nameRU="Окрашивающие (оттеночные)" nameUK="Фарбуючі (відтінкові)"/>
+      <attribute_value id="25235" nameRU="Универсальный  «2-в-1»" nameUK="Універсальний «2-в-1»"/>
+      <attribute_value id="25236" nameRU="Глубокой очистки" nameUK="Глибокого очищення"/>
+      <attribute_value id="178065" nameRU="Для жирных волос" nameUK="Для жирного волосся"/>
+      <attribute_value id="250757" nameRU="Для вьющихся волос" nameUK="Для кучерявого волосся"/>
+      <attribute_value id="272675" nameRU="Антижелтый" nameUK="Антижовтий"/>
+      <attribute_value id="272676" nameRU="Бессульфатный" nameUK="Безсульфатний"/>
+      <attribute_value id="274909" nameRU="Твердый шампунь" nameUK="Твердий шампунь"/>
+      <attribute_value id="306010" nameRU="Дисциплинирующий" nameUK="Дисциплінуючий"/>
+      <attribute_value id="310118" nameRU="Защитный" nameUK="Захисний"/>
+      <attribute_value id="338701" nameRU="Подготовительный шампунь" nameUK="Підготовчий шампунь"/>
+      <attribute_value id="349026" nameRU="Для всех типов волос" nameUK="Для всіх типів волосся"/>
+    </attribute>
+    <attribute id="3875" nameRU="Назначение средства для волос" type="multiselect" nameUK="Призначення засобу для волосся">
+      <attribute_value id="25290" nameRU="Восстановление" nameUK="Відновлення"/>
+      <attribute_value id="25291" nameRU="Для блеска" nameUK="Для блиску"/>
+      <attribute_value id="25292" nameRU="Для объема" nameUK="Для об'єму"/>
+      <attribute_value id="25293" nameRU="Защита от солнца" nameUK="Захист від сонця"/>
+      <attribute_value id="25294" nameRU="Окрашивание" nameUK="Фарбування"/>
+      <attribute_value id="25295" nameRU="От выпадения" nameUK="Від випадіння"/>
+      <attribute_value id="25296" nameRU="От перхоти" nameUK="Від лупи"/>
+      <attribute_value id="25297" nameRU="Очищение" nameUK="Очищення"/>
+      <attribute_value id="25298" nameRU="Выпрямление" nameUK="Випрямлення"/>
+      <attribute_value id="25299" nameRU="Смягчение" nameUK="Пом'якшення"/>
+      <attribute_value id="25301" nameRU="Термозащита" nameUK="Термозахист"/>
+      <attribute_value id="25302" nameRU="Тонизирование" nameUK="Тонізація"/>
+      <attribute_value id="25303" nameRU="Тонирование" nameUK="Тонування"/>
+      <attribute_value id="25304" nameRU="Увлажнение" nameUK="Зволоження"/>
+      <attribute_value id="25305" nameRU="Укрепление" nameUK="Зміцнення"/>
+      <attribute_value id="25306" nameRU="Успокоение" nameUK="Заспокоєння"/>
+      <attribute_value id="25307" nameRU="Влагостойкость" nameUK="Вологостійкість"/>
+      <attribute_value id="25308" nameRU="Выделение прядей" nameUK="Виділення пасом"/>
+      <attribute_value id="25309" nameRU="Легкость расчесывания" nameUK="Легкість розчісування"/>
+      <attribute_value id="25310" nameRU="Оздоровление" nameUK="Оздоровлення"/>
+      <attribute_value id="25311" nameRU="Разглаживание секущихся кончиков" nameUK="Розгладження посічених кінчиків"/>
+      <attribute_value id="25312" nameRU="Снятие статических разрядов" nameUK="Зняття статичних розрядів"/>
+      <attribute_value id="25313" nameRU="Улучшение микроциркуляции" nameUK="Поліпшення мікроциркуляції"/>
+      <attribute_value id="25314" nameRU="Закрепление цвета" nameUK="Закріплення кольору"/>
+      <attribute_value id="25315" nameRU="Утолщение" nameUK="Потовщення"/>
+      <attribute_value id="25316" nameRU="Усиление кудрей/локонов" nameUK="Посилення кучерів/локонів"/>
+      <attribute_value id="25317" nameRU="Усиление цвета/сохранение цвета" nameUK="Посилення кольору/збереження кольору"/>
+      <attribute_value id="25318" nameRU="Закрашивание седины" nameUK="Зафарбовування сивини"/>
+      <attribute_value id="25319" nameRU="Удаление косметического цвета" nameUK="Видалення косметичного кольору"/>
+      <attribute_value id="25321" nameRU="Антивозрастной" nameUK="Антивіковий"/>
+      <attribute_value id="25473" nameRU="Питание" nameUK="Живлення"/>
+      <attribute_value id="25987" nameRU="Защита от пушистости" nameUK="Захист від пухнастості"/>
+      <attribute_value id="28655" nameRU="Стимуляция роста волос" nameUK="Стимуляція росту волосся"/>
+      <attribute_value id="29004" nameRU="Осветление" nameUK="Освітлення"/>
+      <attribute_value id="29660" nameRU="Нейтрализация хлора" nameUK="Нейтралізація хлору"/>
+      <attribute_value id="29663" nameRU="Нейтрализация морской воды" nameUK="Нейтралізація морської води"/>
+      <attribute_value id="306111" nameRU="Химически обработанные волосы" nameUK="Хімічно оброблене волосся"/>
+      <attribute_value id="312907" nameRU="Эластичность" nameUK="Еластичність"/>
+      <attribute_value id="312908" nameRU="Дисциплина волос" nameUK="Дисципліна волосся"/>
+      <attribute_value id="313215" nameRU="Детокс" nameUK="Детокс"/>
+      <attribute_value id="313217" nameRU="Антиоксидант" nameUK="Антиоксидант"/>
+      <attribute_value id="313218" nameRU="Антибактериальное" nameUK="Антибактеріальне"/>
+      <attribute_value id="313219" nameRU="Противовоспалительное" nameUK="Протизапальне"/>
+      <attribute_value id="329213" nameRU="Для нейтрализации оттенка" nameUK="Для нейтралізації відтінку"/>
+      <attribute_value id="338637" nameRU="Освежающая" nameUK="Освіжаюча"/>
+      <attribute_value id="338700" nameRU="Гладкость" nameUK="Гладкість"/>
+      <attribute_value id="338710" nameRU="Антисептическая" nameUK="Антисептична"/>
+      <attribute_value id="338711" nameRU="Себорегуляция" nameUK="Себорегуляція"/>
+      <attribute_value id="338712" nameRU="Противогрибковая" nameUK="Протигрибкова"/>
+      <attribute_value id="339642" nameRU="Упругость" nameUK="Пружність"/>
+    </attribute>
+    <attribute id="3889" nameRU="Лаурил сульфат натрия (SLS)" type="bool" nameUK="Лаурил сульфат натрію (SLS)"/>
+    <attribute id="3890" nameRU="Лаурет сульфат натрия (SLES)" type="bool" nameUK="Лаурет сульфат натрію (SLES)"/>
+    <attribute id="3892" nameRU="Парабены" type="bool" nameUK="Парабени"/>
+    <attribute id="3894" nameRU="Синтетические отдушки" type="bool" nameUK="Синтетичні віддушки"/>
+    <attribute id="3895" nameRU="Синтетические красители" type="bool" nameUK="Синтетичні барвники"/>
+    <attribute id="3897" nameRU="Синтетические консерванты" type="bool" nameUK="Синтетичні консерванти"/>
+    <attribute id="3899" nameRU="Лаурет сульфат аммония" type="bool" nameUK="Лаурет сульфат амонію"/>
+    <attribute id="3900" nameRU="Лаурил сульфат аммония" type="bool" nameUK="Лаурил сульфат амонію"/>
+    <attribute id="3901" nameRU="Силиконовые компоненты" type="bool" nameUK="Силіконові компоненти"/>
+    <attribute id="3902" nameRU="Проблема волос и кожи головы" type="multiselect" nameUK="Проблема волосся і шкіри голови">
+      <attribute_value id="25464" nameRU="Жирность кожи" nameUK="Жирність шкіри"/>
+      <attribute_value id="25465" nameRU="Выпадение волос" nameUK="Випадіння волосся"/>
+      <attribute_value id="25466" nameRU="Ломкость" nameUK="Ламкість"/>
+      <attribute_value id="25467" nameRU="Нарушение цвета волос" nameUK="Порушення кольору волосся"/>
+      <attribute_value id="25468" nameRU="Перхоть" nameUK="Лупа"/>
+      <attribute_value id="25469" nameRU="Ослабленные волосы" nameUK="Ослаблене волосся"/>
+      <attribute_value id="25470" nameRU="Сухость кожи" nameUK="Сухість шкіри"/>
+      <attribute_value id="25472" nameRU="Себорея" nameUK="Себорея"/>
+      <attribute_value id="25548" nameRU="Секущиеся кончики" nameUK="Посічені кінчики"/>
+      <attribute_value id="25549" nameRU="Истонченные волосы" nameUK="Стоншене волосся"/>
+      <attribute_value id="25551" nameRU="Поседение волос" nameUK="Посивіння волосся"/>
+      <attribute_value id="25556" nameRU="Ослабленный рост волос" nameUK="Ослаблене зростання волосся"/>
+      <attribute_value id="25559" nameRU="Чувствительность кожи головы" nameUK="Чутливість шкіри голови"/>
+      <attribute_value id="25567" nameRU="Псориаз кожи головы" nameUK="Псоріаз шкіри голови"/>
+      <attribute_value id="25587" nameRU="Покраснение кожи головы" nameUK="Почервоніння шкіри голови"/>
+      <attribute_value id="25588" nameRU="Зуд" nameUK="Свербіж"/>
+      <attribute_value id="313216" nameRU="Повышенная потливость" nameUK="Підвищена пітливість"/>
+      <attribute_value id="332597" nameRU="Атопический дерматит" nameUK="Атопічний дерматит"/>
+      <attribute_value id="332598" nameRU="Екзема" nameUK=""/>
+    </attribute>
+    <attribute id="4326" nameRU="Тип аромата" type="multiselect" nameUK="Тип аромату">
+      <attribute_value id="269366" nameRU="Гранат" nameUK="Гранат"/>
+      <attribute_value id="269368" nameRU="Лаванда" nameUK="Лаванда"/>
+      <attribute_value id="269369" nameRU="Кофе" nameUK="Кава"/>
+      <attribute_value id="269370" nameRU="Кокос" nameUK="Кокос"/>
+      <attribute_value id="270216" nameRU="Ваниль" nameUK="Ваніль"/>
+      <attribute_value id="270224" nameRU="Ягоды" nameUK="Ягоди"/>
+      <attribute_value id="271464" nameRU="Апельсин" nameUK="Апельсин"/>
+      <attribute_value id="271543" nameRU="Ананас" nameUK="Ананас"/>
+      <attribute_value id="274836" nameRU="Без аромата" nameUK="Без аромату"/>
+      <attribute_value id="288782" nameRU="Вишня" nameUK="Вишня"/>
+      <attribute_value id="288783" nameRU="Клубника" nameUK="Полуниця"/>
+      <attribute_value id="288785" nameRU="Виноград" nameUK="Виноград"/>
+      <attribute_value id="295831" nameRU="Янтарный" nameUK="Бурштиновий"/>
+      <attribute_value id="300973" nameRU="Яблоко" nameUK="Яблуко"/>
+      <attribute_value id="301171" nameRU="Тропический" nameUK="Тропічний"/>
+      <attribute_value id="304450" nameRU="Лесные ягоды" nameUK="Лісові ягоди"/>
+      <attribute_value id="305775" nameRU="Арбуз" nameUK="Кавун"/>
+      <attribute_value id="310161" nameRU="Роза" nameUK="Троянда"/>
+      <attribute_value id="312585" nameRU="Алое" nameUK="Алое"/>
+      <attribute_value id="312607" nameRU="Морская свежесть" nameUK="Морська свіжість"/>
+      <attribute_value id="313624" nameRU="Банан" nameUK="Банан"/>
+      <attribute_value id="313640" nameRU="Дыня" nameUK="Диня"/>
+      <attribute_value id="314068" nameRU="Ореховый" nameUK="Горіховий"/>
+      <attribute_value id="314070" nameRU="Капучино" nameUK="Капучино"/>
+      <attribute_value id="314148" nameRU="Корица" nameUK="Кориця"/>
+      <attribute_value id="330158" nameRU="Авокадо" nameUK="Авокадо"/>
+      <attribute_value id="349398" nameRU="Акватический " nameUK=""/>
+      <attribute_value id="349399" nameRU="Алкогольно-коктейльный" nameUK=""/>
+      <attribute_value id="349401" nameRU="Белый чай" nameUK=""/>
+      <attribute_value id="349402" nameRU="Виски" nameUK=""/>
+      <attribute_value id="349403" nameRU="Вишневые" nameUK=""/>
+      <attribute_value id="349405" nameRU="Воздушный " nameUK=""/>
+      <attribute_value id="349406" nameRU="Желтоцветочный" nameUK=""/>
+      <attribute_value id="349407" nameRU="Землистый" nameUK=""/>
+      <attribute_value id="349408" nameRU="Ирисивый" nameUK=""/>
+      <attribute_value id="349409" nameRU="Какао" nameUK=""/>
+      <attribute_value id="349410" nameRU="Карамельный" nameUK=""/>
+      <attribute_value id="349411" nameRU="Кедровый" nameUK=""/>
+      <attribute_value id="349412" nameRU="Кофейный" nameUK=""/>
+      <attribute_value id="349413" nameRU="Лавандовый" nameUK=""/>
+      <attribute_value id="349414" nameRU="Ландыш" nameUK=""/>
+      <attribute_value id="349415" nameRU="Лесной" nameUK=""/>
+      <attribute_value id="349416" nameRU="Медовый" nameUK=""/>
+      <attribute_value id="349417" nameRU="Молочно-пудровые" nameUK=""/>
+      <attribute_value id="349418" nameRU="Молочный" nameUK=""/>
+      <attribute_value id="349419" nameRU="Мускусный" nameUK=""/>
+      <attribute_value id="349420" nameRU="Мягкий" nameUK=""/>
+      <attribute_value id="349421" nameRU="Мятные" nameUK=""/>
+      <attribute_value id="349422" nameRU="Озоновый" nameUK=""/>
+      <attribute_value id="349423" nameRU="Океанический" nameUK=""/>
+      <attribute_value id="349424" nameRU="Ориентальный" nameUK=""/>
+      <attribute_value id="349425" nameRU="Острый" nameUK=""/>
+      <attribute_value id="349426" nameRU="Повседневно-необычный" nameUK=""/>
+      <attribute_value id="349427" nameRU="Ром" nameUK=""/>
+      <attribute_value id="349428" nameRU="Свежий" nameUK=""/>
+      <attribute_value id="349429" nameRU="Свежий (цитрусовый)" nameUK=""/>
+      <attribute_value id="349430" nameRU="Серая амбра" nameUK=""/>
+      <attribute_value id="349431" nameRU="Сирень" nameUK=""/>
+      <attribute_value id="349432" nameRU="Сладкий" nameUK=""/>
+      <attribute_value id="349433" nameRU="Смолистый" nameUK=""/>
+      <attribute_value id="349434" nameRU="Солодовый" nameUK=""/>
+      <attribute_value id="349435" nameRU="Теплый" nameUK=""/>
+      <attribute_value id="349436" nameRU="Тмин" nameUK=""/>
+      <attribute_value id="349437" nameRU="Травянистый" nameUK=""/>
+      <attribute_value id="349438" nameRU="Уд" nameUK=""/>
+      <attribute_value id="349439" nameRU="Хвойный" nameUK=""/>
+      <attribute_value id="349440" nameRU="Цветочно-зеленый" nameUK=""/>
+      <attribute_value id="349441" nameRU="Чайно-кондитерский" nameUK=""/>
+      <attribute_value id="349442" nameRU="Шокирующий" nameUK=""/>
+      <attribute_value id="349443" nameRU="Шоколадный" nameUK=""/>
+    </attribute>
+  </category>
+</categories>

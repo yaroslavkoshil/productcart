@@ -27,6 +27,13 @@ document.addEventListener('DOMContentLoaded', () => {
     let lastProductId = null;
     let currentGroupId = 'all';
     let allGroupsMap = {}; // зберігаємо дерево груп
+    
+    // Завантажуємо базу характеристик Прому
+    let promAttributesDb = {};
+    fetch('/data/attributes.json')
+        .then(res => res.json())
+        .then(data => { promAttributesDb = data; console.log('Loaded Prom attributes DB', Object.keys(data).length, 'categories'); })
+        .catch(err => console.warn('No attributes DB yet:', err));
 
     // Завантаження збережених токенів
     const savedProm = localStorage.getItem('promToken');
@@ -427,14 +434,44 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- ЛОГІКА МОДАЛЬНОГО ВІКНА ТА ШІ ---
 
-    // Створення рядка характеристики
-function createAttributeRow(name = '', value = '', id = '') {
+    // Створення рядка характеристики (з підтримкою випадаючого списку)
+function createAttributeRow(name = '', value = '', id = '', schema = null) {
     const row = document.createElement('div');
     row.className = 'attr-row';
-    row.style = 'display: flex; gap: 8px; align-items: center;';
+    row.style = 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px;';
+    
+    let valueInputHtml = `<input type="text" class="input attr-value" placeholder="Значення (напр. Білий)" value="${value}" style="flex: 1; padding: 4px;">`;
+    let nameHtml = `<input type="text" class="input attr-name" placeholder="Назва (напр. Колір)" value="${name}" data-id="${id}" style="flex: 1; padding: 4px;">`;
+    let unitHtml = '';
+    
+    // Якщо у нас є схема з бази Прому для цієї характеристики
+    if (schema) {
+        nameHtml = `<input type="text" class="input attr-name" value="${schema.name}" data-id="${schema.id}" readonly style="flex: 1; padding: 4px; background: #f0f0f0; border-color: #ddd;">`;
+        if (schema.unit) {
+            unitHtml = `<span style="color: #666; font-size: 0.9em; width: 30px; text-align: center;">${schema.unit}</span>`;
+        }
+        
+        if (schema.values && schema.values.length > 0) {
+            // Випадаючий список
+            let options = `<option value="">-- Оберіть --</option>`;
+            // Додаємо поточне значення, якщо його немає в списку (щоб не втратити дані)
+            if (value && !schema.values.includes(value)) {
+                options += `<option value="${value}" selected>${value} (поточне)</option>`;
+            }
+            schema.values.forEach(v => {
+                const selected = v === value ? 'selected' : '';
+                options += `<option value="${v}" ${selected}>${v}</option>`;
+            });
+            valueInputHtml = `<select class="input attr-value" style="flex: 1; padding: 4px;">${options}</select>`;
+        }
+    }
+    
     row.innerHTML = `
-        <input type="text" class="input attr-name" placeholder="Назва (напр. Колір)" value="${name}" data-id="${id}" style="flex: 1; padding: 4px;">
-        <input type="text" class="input attr-value" placeholder="Значення (напр. Білий)" value="${value}" style="flex: 1; padding: 4px;">
+        ${nameHtml}
+        <div style="flex: 1; display: flex; gap: 4px; align-items: center;">
+            ${valueInputHtml}
+            ${unitHtml}
+        </div>
         <button class="btn icon-btn remove-attr-btn" title="Видалити" style="color: #ff4d4f; padding: 4px; flex-shrink: 0;">❌</button>
     `;
     
@@ -560,12 +597,59 @@ async function openModal(summaryProduct) {
         // Заповнюємо характеристики
         const attrContainer = document.getElementById('attributes-container');
         attrContainer.innerHTML = '';
+        
         const attributes = product.attributes || product.parameters || [];
-        if (attributes.length > 0) {
-            attributes.forEach(attr => {
-                attrContainer.appendChild(createAttributeRow(attr.name, attr.value, attr.id || ''));
+        const existingAttrsMap = {};
+        attributes.forEach(a => { existingAttrsMap[a.id || a.name] = a; });
+        
+        // Перевіряємо чи є категорія в нашій локальній базі
+        const categoryId = product.category ? product.category.id : null;
+        const categoryName = product.category ? product.category.caption : 'Невідома';
+        const catSchema = categoryId && promAttributesDb[categoryId] ? promAttributesDb[categoryId] : null;
+        
+        // Додаємо інформаційне повідомлення
+        const debugDiv = document.createElement('div');
+        debugDiv.style = "margin-bottom: 10px; padding: 8px; font-size: 0.9em; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px;";
+        
+        if (catSchema) {
+            debugDiv.innerHTML = `✅ Категорія порталу: <b>${categoryName} (ID: ${categoryId})</b>. Довідник знайдено!`;
+            debugDiv.style.borderColor = "#b7eb8f";
+            debugDiv.style.background = "#f6ffed";
+            
+            console.log("Using category schema for:", catSchema.name);
+            // Малюємо всі поля з бази Прому
+            catSchema.attributes.forEach(schemaAttr => {
+                const existingAttr = existingAttrsMap[schemaAttr.id] || existingAttrsMap[schemaAttr.name];
+                const value = existingAttr ? existingAttr.value : '';
+                attrContainer.appendChild(createAttributeRow(schemaAttr.name, value, schemaAttr.id, schemaAttr));
+                
+                // Видаляємо з мапи, щоб знати що залишились кастомні
+                if (existingAttr) {
+                    delete existingAttrsMap[schemaAttr.id];
+                    delete existingAttrsMap[schemaAttr.name];
+                }
             });
+        } else {
+            const knownIds = Object.keys(promAttributesDb).join(', ');
+            debugDiv.innerHTML = `⚠️ Категорія порталу: <b>${categoryName} (ID: ${categoryId || 'Немає'})</b>. <br>
+                Довідник для неї ще не завантажено! (В базі зараз є: ${knownIds}). <br>
+                Скиньте посилання для категорії ${categoryId} в чат, щоб додати її.`;
+            debugDiv.style.borderColor = "#ffe58f";
+            debugDiv.style.background = "#fffbe6";
         }
+        
+        // Вставляємо повідомлення перед контейнером атрибутів
+        const attrsSection = attrContainer.parentElement;
+        const existingDebug = attrsSection.querySelector('.cat-debug');
+        if (existingDebug) existingDebug.remove();
+        debugDiv.className = 'cat-debug';
+        attrsSection.insertBefore(debugDiv, attrContainer);
+
+        // Малюємо всі інші (користувацькі) характеристики, яких не було в базі
+        Object.values(existingAttrsMap).forEach(attr => {
+            attrContainer.appendChild(createAttributeRow(attr.name, attr.value, attr.id || ''));
+        });
+        
         document.getElementById('ai-name-uk').value = currentNameUk;
         document.getElementById('ai-name-ru').value = currentNameRu;
         document.getElementById('ai-keywords-uk').value = currentKeywords;
