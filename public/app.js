@@ -451,7 +451,7 @@ function createAttributeRow(name = '', value = '', id = '', schema = null) {
     if (schema) {
         nameHtml = `<input type="text" class="input attr-name" value="${schema.name}" data-id="${schema.id}" readonly style="flex: 1; padding: 4px; background: #f0f0f0; border-color: #ddd;">`;
         if (schema.unit) {
-            unitHtml = `<span style="color: #666; font-size: 0.9em; width: 30px; text-align: center;">${schema.unit}</span>`;
+            unitHtml = `<span class="attr-unit" style="color: #666; font-size: 0.9em; width: 30px; text-align: center;">${schema.unit}</span>`;
         }
         
         if (schema.values && schema.values.length > 0) {
@@ -909,10 +909,12 @@ async function openModal(summaryProduct) {
             document.querySelectorAll('.attr-row').forEach(row => {
                 const nameInput = row.querySelector('.attr-name');
                 const valInput = row.querySelector('.attr-value');
+                const unitSpan = row.querySelector('.attr-unit');
                 
                 if (!nameInput || !valInput) return;
                 
                 const name = nameInput.value.trim();
+                const unit = unitSpan ? unitSpan.textContent.trim() : '';
                 let value = '';
                 
                 if (valInput.classList.contains('multi-checkbox-container')) {
@@ -922,7 +924,7 @@ async function openModal(summaryProduct) {
                 }
                 
                 if (name && value) {
-                    exportItem._attributes.push({ name, value });
+                    exportItem._attributes.push({ name, value, unit });
                 }
             });
 
@@ -1014,7 +1016,7 @@ async function openModal(summaryProduct) {
                 for (let i = 0; i < maxAttrs; i++) {
                     if (item._attributes && item._attributes[i]) {
                         row.push(item._attributes[i].name);
-                        row.push(''); // Одиниця виміру (порожня, бо ми її не генеруємо)
+                        row.push(item._attributes[i].unit || ''); // Одиниця виміру
                         row.push(item._attributes[i].value);
                     } else {
                         // Якщо у цього товару менше характеристик, заповнюємо порожнечею
