@@ -37,7 +37,7 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Завантажуємо базу характеристик Прому
     let promAttributesDb = {};
-    fetch('/data/attributes.json')
+    fetch(`/data/attributes.json?v=${new Date().getTime()}`)
         .then(res => res.json())
         .then(data => { promAttributesDb = data; console.log('Loaded Prom attributes DB', Object.keys(data).length, 'categories'); })
         .catch(err => console.warn('No attributes DB yet:', err));
@@ -695,7 +695,7 @@ async function openModal(summaryProduct) {
                             alert(`Успіх! Завантажено ${data.addedCount} категорій. Оновлюю вікно...`);
                             
                             // Оновлюємо локальну базу
-                            const attrsRes = await fetch('/data/attributes.json');
+                            const attrsRes = await fetch(`/data/attributes.json?v=${new Date().getTime()}`);
                             promAttributesDb = await attrsRes.json();
                             
                             // Перевідкриваємо вікно, щоб характеристики з'явились
