@@ -4,209 +4,291 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>PromAI Filler</title>
-    <link rel="stylesheet" href="style.css?v=6">
-    <link rel="stylesheet" href="modal.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=10">
+    <link rel="stylesheet" href="modal.css?v=10">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 </head>
 <body>
-    <div class="container">
-        <header>
-            <div class="header-content">
-                <h1>PromAI Filler</h1>
-                <p>Автоматичне наповнення карток товарів Prom.ua за допомогою ШІ</p>
-            </div>
-            <div class="header-actions" id="header-actions" style="display: none;">
-                <button id="disconnect-btn" class="btn secondary">Відключитись</button>
-            </div>
-        </header>
-
-        <main id="app">
-            <!-- Секція підключення -->
-            <section id="auth-section" class="card auth-section">
-                <h2>Підключення</h2>
-                <div class="form-group">
-                    <label for="prom-token">Prom.ua API Token</label>
-                    <input type="password" id="prom-token" placeholder="Введіть ваш Prom API токен">
+    <div class="app-container">
+        
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo-area">
+                <div class="logo-icon">✨</div>
+                <div class="logo-text">
+                    <h1>PromAI Filler</h1>
+                    <span>Catalog Intelligence</span>
                 </div>
-                <div class="form-group">
-                    <label for="anthropic-token">Anthropic (Claude) API Key</label>
-                    <input type="password" id="anthropic-token" placeholder="Введіть ваш Anthropic API ключ">
+            </div>
+            
+            <div class="sidebar-title">Workspace</div>
+            <h3 style="font-size: 1rem; margin: 0 0.5rem 1rem; font-weight: 700;">Категорії каталогу</h3>
+            
+            <div id="groups-list" class="groups-list">
+                <div class="loading">Завантаження груп...</div>
+            </div>
+
+            <div class="ai-coverage-card" style="display: none;" id="ai-coverage-card">
+                <h4>AI покриття</h4>
+                <p><span id="coverage-count">0</span> товарів оптимізовано</p>
+                <div class="progress-bar">
+                    <div class="progress-fill" style="width: 81%;"></div>
                 </div>
-                <button id="connect-btn" class="btn primary">Підключитися та завантажити товари</button>
-                <div id="auth-error" class="error-msg" style="display: none;"></div>
-            </section>
+                <div style="font-size: 1.5rem; font-weight: 700; text-align: right; margin-top: -15px;">81%</div>
+                <a href="#" style="color: white; font-size: 0.75rem; text-decoration: underline; opacity: 0.9;">Переглянути статистику</a>
+            </div>
+        </aside>
 
-            <!-- Секція каталогу -->
-            <section id="catalog-section" class="catalog-section" style="display: none;">
-                <div class="layout">
-                    <aside class="sidebar card">
-                        <h3>Групи товарів</h3>
-                        <div id="groups-list" class="groups-list">
-                            <div class="loading">Завантаження груп...</div>
-                        </div>
-                    </aside>
+        <!-- Main Content -->
+        <main class="main-area" id="app">
+            
+            <div class="topbar">
+                <div class="search-container">
+                    <span class="search-icon">🔍</span>
+                    <input type="text" id="search-input" placeholder="Пошук (ID, SKU, назва)...">
+                </div>
+                <div class="topbar-actions" id="header-actions" style="display: none;">
+                    <button id="disconnect-btn" class="btn">Відключитись</button>
+                    <div style="width: 32px; height: 32px; background: #fbbf24; color: #78350f; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 0.8rem;">AM</div>
+                </div>
+            </div>
 
-                    <div class="main-content">
-                        <div class="controls card">
-                            <!-- Search Bar -->
-                            <div class="search-bar">
-                                <input type="text" id="search-input" placeholder="Пошук (ID, SKU, назва)..." class="input">
-                                <button class="btn" id="search-btn">🔍 Знайти всюди</button>
-                            </div>
-                            <div class="stats">
-                                Завантажено: <span id="products-count">0</span>
+            <div class="content-wrapper">
+                
+                <!-- Auth Section -->
+                <section id="auth-section" class="auth-section">
+                    <h2>Підключення</h2>
+                    <div class="form-group">
+                        <label for="prom-token">Prom.ua API Token</label>
+                        <input type="password" id="prom-token" placeholder="Введіть ваш Prom API токен">
+                    </div>
+                    <div class="form-group">
+                        <label for="anthropic-token">Anthropic (Claude) API Key</label>
+                        <input type="password" id="anthropic-token" placeholder="Введіть ваш Anthropic API ключ">
+                    </div>
+                    <button id="connect-btn" class="btn primary">Підключитися та завантажити товари</button>
+                    <div id="auth-error" class="error-msg" style="display: none;"></div>
+                </section>
+
+                <!-- Catalog Section -->
+                <section id="catalog-section" style="display: none;">
+                    <div class="catalog-header">
+                        <div>
+                            <div class="breadcrumbs" id="breadcrumbs">Всі товари</div>
+                            <div class="category-title">
+                                <span id="current-category-name">Всі товари</span>
+                                <span class="category-badge" id="products-count">0 товарів</span>
                             </div>
                         </div>
-                        
-                        <div id="products-grid" class="products-grid">
-                            <div class="loading">Завантаження товарів...</div>
-                        </div>
-                        <div style="text-align: center; margin-top: 2rem;">
-                            <button id="load-more-btn" class="btn secondary" style="display: none;">Завантажити ще 50 товарів</button>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn">Завантажити довідник</button>
                         </div>
                     </div>
-                </div>
-            </section>
+                    
+                    <div id="products-grid" class="products-grid">
+                        <div class="loading">Завантаження товарів...</div>
+                    </div>
+                    
+                    <div style="text-align: center; margin-top: 3rem; margin-bottom: 3rem;">
+                        <button id="load-more-btn" class="btn" style="display: none;">Завантажити ще 50 товарів</button>
+                    </div>
+                </section>
+            </div>
         </main>
     </div>
 
-    <!-- Модальне вікно редагування товару -->
-    <div id="product-modal" class="modal">
-        <div class="modal-content card">
-            <div class="modal-header">
-                <h2 id="modal-title">Редагування товару</h2>
-                <span class="close-modal">&times;</span>
+    <!-- Export Widget -->
+    <div id="export-widget" class="export-widget" style="display: none;">
+        <div class="export-widget-top">
+            <div class="export-info">
+                <div class="export-icon">📥</div>
+                <div class="export-text">
+                    <h4>XLSX черга експорту</h4>
+                    <p>В черзі: <span id="export-count">0 товарів</span></p>
+                </div>
             </div>
-            <div class="modal-body layout-2col">
+            <button id="clear-xlsx-btn" class="btn-delete" title="Очистити чергу">🗑️</button>
+        </div>
+        <button id="download-xlsx-btn" class="btn primary" style="width: 100%; justify-content: center;">⬇️ Завантажити XLSX</button>
+        <div style="font-size: 0.75rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+            <span style="color: var(--success);">✓</span> Готово до експорту на маркетплейс
+        </div>
+    </div>
+
+    <!-- AI Editor Modal -->
+    <div id="product-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="kicker">AI LISTING EDITOR</div>
+                <h2 id="modal-title">Редагування товару</h2>
+                <div class="meta"><span id="modal-sku">SKU: ---</span> &nbsp;&middot;&nbsp; ID: <span id="modal-id">---</span></div>
+                <div class="status-pill">Draft in progress</div>
+                <div class="close-modal">&times;</div>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Left Column -->
                 <div class="col-left">
-                    <img id="modal-img" src="" alt="Product">
+                    <div class="current-data-header">
+                        <div class="current-data-header-icon">📑</div>
+                        <div>
+                            <h3>Поточні дані (на Prom)</h3>
+                            <p>Read-only source from your storefront</p>
+                        </div>
+                    </div>
                     
-                    <div class="current-data">
-                        <h3>Поточні дані (на Prom):</h3>
-                        <div class="data-group">
-                            <label>Назва:</label>
-                            <div id="current-name" class="read-only-box"></div>
+                    <div class="current-card">
+                        <img id="modal-img" class="modal-img" src="" alt="Product">
+                        <div class="current-card-meta">
+                            <div>
+                                <div class="current-card-price" id="current-price">0.00 ₴</div>
+                                <div class="current-card-stock" id="current-stock">В наявності</div>
+                            </div>
+                            <div class="current-card-cat" id="current-cat-badge">Category</div>
                         </div>
-                        <div class="data-group">
-                            <label>Ключові слова:</label>
-                            <div id="current-keywords" class="read-only-box"></div>
-                        </div>
-                        <div class="data-group">
-                            <label>Опис:</label>
-                            <div id="current-desc" class="read-only-box desc-box"></div>
-                        </div>
+                    </div>
+                    
+                    <div class="read-only-group">
+                        <label>CURRENT TITLE</label>
+                        <div id="current-name" class="read-only-box"></div>
+                    </div>
+                    <div class="read-only-group">
+                        <label>CURRENT SEO KEYWORDS</label>
+                        <div id="current-keywords" class="read-only-box"></div>
+                    </div>
+                    <div class="read-only-group">
+                        <label>CURRENT DESCRIPTION</label>
+                        <div id="current-desc" class="read-only-box desc-box"></div>
                     </div>
                 </div>
 
-                <div class="col-right ai-column">
-                    <h3>Згенеровано ШІ (або ручне редагування):</h3>
-                    
-                    <div class="form-group mb-15">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                            <label style="margin-bottom: 0;">Код/Артикул (SKU):</label>
-                            <button class="btn icon-btn" id="rand-sku-btn" title="Згенерувати випадковий 13-значний артикул" type="button" style="padding: 0 5px; font-size: 1.2em;">🎲</button>
-                        </div>
-                        <input type="text" id="edit-sku" class="input">
-                    </div>
-
-
-                    <div class="data-group">
-                        <div class="label-with-action">
-                            <label>Нова Назва (до 110 симв.):</label>
+                <!-- Right Column -->
+                <div class="col-right">
+                    <div class="ai-ready-header">
+                        <div class="ai-ready-title">
+                            <div class="ai-ready-title-icon">✨</div>
                             <div>
-                                <button class="btn icon-btn copy-btn" data-target="name" title="Копіювати з поточних">📋</button>
-                                <button class="btn secondary small gen-btn" data-type="title">✨ Згенерувати</button>
+                                <h3>AI-ready listing</h3>
+                                <p>Edit, generate, and translate every field</p>
                             </div>
                         </div>
-                        <div class="lang-field">
-                            <span class="lang-badge">UK</span>
-                            <input type="text" id="ai-name-uk" class="edit-input" maxlength="110">
-                            <span class="char-counter" id="count-name-uk">0/110</span>
+                        <div class="lang-badge-top">UK / RU</div>
+                    </div>
+
+                    <!-- SKU -->
+                    <div class="form-group-ai">
+                        <div class="form-group-header">
+                            <label>Код/Артикул (SKU)</label>
+                            <div class="form-actions">
+                                <button class="btn-trans" id="rand-sku-btn" type="button" title="Випадковий артикул">🎲 13 цифр</button>
+                            </div>
                         </div>
-                        <div class="lang-field mt-2">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span class="lang-badge" style="position: static;">RU</span>
-                                <button class="btn icon-btn translate-btn" data-target="title" title="Перекласти з укр">🌐 Перекласти на RU</button>
+                        <input type="text" id="edit-sku" class="edit-input">
+                    </div>
+
+                    <!-- Title -->
+                    <div class="form-group-ai">
+                        <div class="form-group-header">
+                            <label>Назва товару</label>
+                            <div class="form-actions">
+                                <button class="btn-trans copy-btn" data-target="name">📋 Скопіювати</button>
+                                <button class="btn-magic gen-btn" data-type="title">✨ Generate with AI</button>
+                            </div>
+                        </div>
+                        <div class="lang-block">
+                            <div class="lang-label-inline"><span class="lang-badge">UK</span></div>
+                            <input type="text" id="ai-name-uk" class="edit-input" maxlength="110">
+                            <span class="char-count-text" id="count-name-uk">0/110 characters</span>
+                        </div>
+                        <div class="lang-block">
+                            <div class="lang-label-inline" style="justify-content: space-between;">
+                                <div style="display:flex; gap: 8px; align-items:center;"><span class="lang-badge">RU</span></div>
+                                <button class="btn-trans translate-btn" style="padding: 2px 8px; font-size: 0.7rem;" data-target="title">🌐 Translate</button>
                             </div>
                             <input type="text" id="ai-name-ru" class="edit-input" maxlength="110">
-                            <span class="char-counter" id="count-name-ru">0/110</span>
+                            <span class="char-count-text" id="count-name-ru">0/110 characters</span>
                         </div>
                     </div>
 
-                    <div class="data-group">
-                        <div class="label-with-action">
-                            <label>Новий HTML Опис:</label>
-                            <div>
-                                <button class="btn icon-btn copy-btn" data-target="description" title="Копіювати з поточних">📋</button>
-                                <button class="btn secondary small gen-btn" data-type="description">✨ Згенерувати</button>
+                    <!-- Keywords -->
+                    <div class="form-group-ai">
+                        <div class="form-group-header">
+                            <label>SEO Ключові слова</label>
+                            <div class="form-actions">
+                                <button class="btn-trans copy-btn" data-target="keywords">📋 Скопіювати</button>
+                                <button class="btn-magic gen-btn" data-type="keywords">✨ Generate with AI</button>
                             </div>
                         </div>
-                        <div class="lang-field">
-                            <span class="lang-badge">UK</span>
-                            <textarea id="ai-desc-uk" class="edit-input desc-input" rows="10"></textarea>
+                        <div class="lang-block">
+                            <div class="lang-label-inline"><span class="lang-badge">UK</span></div>
+                            <textarea id="ai-keywords-uk" class="edit-input" style="min-height: 80px;"></textarea>
+                            <span class="char-count-text" id="count-keywords-uk">0/1024 characters</span>
                         </div>
-                        <div class="lang-field mt-2">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span class="lang-badge" style="position: static;">RU</span>
-                                <button class="btn icon-btn translate-btn" data-target="description" title="Перекласти з укр">🌐 Перекласти на RU</button>
+                        <div class="lang-block">
+                            <div class="lang-label-inline" style="justify-content: space-between;">
+                                <div style="display:flex; gap: 8px; align-items:center;"><span class="lang-badge">RU</span></div>
+                                <button class="btn-trans translate-btn" style="padding: 2px 8px; font-size: 0.7rem;" data-target="keywords">🌐 Translate</button>
                             </div>
-                            <textarea id="ai-desc-ru" class="edit-input desc-input" rows="10"></textarea>
+                            <textarea id="ai-keywords-ru" class="edit-input" style="min-height: 80px;"></textarea>
+                            <span class="char-count-text" id="count-keywords-ru">0/1024 characters</span>
                         </div>
                     </div>
 
-                    <div class="data-group">
-                        <div class="label-with-action">
-                            <label>Нові Ключові слова:</label>
-                            <div>
-                                <button class="btn icon-btn copy-btn" data-target="keywords" title="Копіювати з поточних">📋</button>
-                                <button class="btn secondary small gen-btn" data-type="keywords">✨ Згенерувати</button>
+                    <!-- Description -->
+                    <div class="form-group-ai">
+                        <div class="form-group-header">
+                            <label>HTML Опис</label>
+                            <div class="form-actions">
+                                <button class="btn-trans copy-btn" data-target="description">📋 Скопіювати</button>
+                                <button class="btn-magic gen-btn" data-type="description">✨ Generate with AI</button>
                             </div>
                         </div>
-                        <div class="lang-field">
-                            <span class="lang-badge">UK</span>
-                            <textarea id="ai-keywords-uk" class="edit-input" rows="6"></textarea>
-                            <span class="char-counter" id="count-keywords-uk">0/1024</span>
+                        <div class="lang-block">
+                            <div class="lang-label-inline"><span class="lang-badge">UK</span></div>
+                            <textarea id="ai-desc-uk" class="edit-input desc-input"></textarea>
                         </div>
-                        <div class="lang-field mt-2">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                                <span class="lang-badge" style="position: static;">RU</span>
-                                <button class="btn icon-btn translate-btn" data-target="keywords" title="Перекласти з укр">🌐 Перекласти на RU</button>
+                        <div class="lang-block">
+                            <div class="lang-label-inline" style="justify-content: space-between;">
+                                <div style="display:flex; gap: 8px; align-items:center;"><span class="lang-badge">RU</span></div>
+                                <button class="btn-trans translate-btn" style="padding: 2px 8px; font-size: 0.7rem;" data-target="description">🌐 Translate</button>
                             </div>
-                            <textarea id="ai-keywords-ru" class="edit-input" rows="6"></textarea>
-                            <span class="char-counter" id="count-keywords-ru">0/1024</span>
+                            <textarea id="ai-desc-ru" class="edit-input desc-input"></textarea>
                         </div>
                     </div>
 
-                    <div class="data-group mt-2">
-                        <div class="label-with-action">
-                            <label>Характеристики (Атрибути):</label>
-                            <div>
-                                <button class="btn secondary small gen-btn" data-type="attributes" title="Заповнити на основі опису">✨ Згенерувати</button>
-                                <button class="btn secondary small" id="add-attr-btn">+ Додати</button>
+                    <!-- Attributes -->
+                    <div class="attributes-section">
+                        <div class="attr-header">
+                            <h4>Характеристики (Attributes)</h4>
+                            <div style="display: flex; gap: 10px;">
+                                <button class="btn-magic gen-btn" data-type="attributes">✨ Generate Attributes</button>
+                                <button class="btn-add-attr" id="add-attr-btn">+ Add attribute</button>
                             </div>
                         </div>
-                        <div id="attributes-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
-                            <!-- Attributes will be rendered here -->
+                        <div id="attributes-container">
+                            <!-- JS will inject attributes here -->
                         </div>
                     </div>
                 </div>
             </div>
+            
             <div class="modal-footer">
-                <div id="save-status" class="status-msg"></div>
-                <button id="save-btn" class="btn primary">📥 Додати до XLSX експорту</button>
+                <div class="footer-status">
+                    <div class="status-icon-circle">✓</div>
+                    <div class="status-text">
+                        <h4 id="save-status-title">Готово до збереження</h4>
+                        <p>Натисніть кнопку, щоб додати цей товар до файлу експорту.</p>
+                        <div id="save-status" style="color: var(--danger); font-size: 0.8rem; margin-top: 4px;"></div>
+                    </div>
+                </div>
+                <button id="save-btn" class="btn-large-primary">📥 Add to XLSX Export Queue</button>
             </div>
         </div>
     </div>
 
-    <div id="export-widget" class="export-widget" style="display: none; position: fixed; bottom: 40px; right: 40px; background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(10px); padding: 1.2rem 1.5rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-hover); z-index: 1000; align-items: center; border: 1px solid rgba(226, 232, 240, 0.8);">
-        <span id="export-count" style="font-weight: 700; margin-right: 1.5rem; color: var(--text-color); font-size: 1.1rem;">В черзі: 0 товарів</span>
-        <button id="download-xlsx-btn" class="btn" style="background: var(--primary-gradient); color: white; border: none; box-shadow: 0 4px 12px rgba(99,102,241,0.3);">⬇️ Завантажити файл</button>
-        <button id="clear-xlsx-btn" class="btn icon-btn" style="color: var(--danger); font-size: 1.2rem; margin-left: 10px; background: rgba(239, 68, 68, 0.1);" title="Очистити чергу">🗑️</button>
-    </div>
-
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="app.js?v=101"></script>
+    <script src="app.js?v=200"></script>
 </body>
 </html>

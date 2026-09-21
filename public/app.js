@@ -362,22 +362,30 @@ document.addEventListener('DOMContentLoaded', () => {
             card.className = 'product-card';
             card.style.position = 'relative';
             
-            const isInQueue = exportQueue.some(item => String(item['Ідентифікатор_товару']) === String(p.id));
-            const badgeHtml = isInQueue ? `<div style="position: absolute; top: 10px; right: 10px; background: #217346; color: white; padding: 2px 8px; border-radius: 4px; font-size: 0.8em; font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); pointer-events: none;">В черзі</div>` : '';
+            const badgeHtml = isInQueue ? `<div class="status-badge in-queue"><span>✓</span> В черзі</div>` : `<div></div>`; // empty div to keep flex space if needed, though justify-content handles it
+            
+            const aiStatusClass = isInQueue ? 'complete' : 'needs-review';
+            const aiStatusText = isInQueue ? 'AI complete' : 'Needs review';
             
             const imgSrc = p.main_image || 'https://via.placeholder.com/250?text=No+Image';
-            const price = p.price ? `${p.price} ${p.currency || '₴'}` : 'Ціна не вказана';
+            const price = p.price ? `${p.price} ${p.currency || '₴'}` : '---';
             
             card.innerHTML = `
-                ${badgeHtml}
-                <img src="${imgSrc}" class="product-img" alt="Product">
-                <div class="product-info">
-                    <div class="product-name">${p.name}</div>
-                    <div class="product-price">${price}</div>
-                    <div class="product-meta">
-                        <span>ID: ${p.id}</span>
-                        <span style="color: ${p.status === 'on_display' ? 'var(--primary)' : 'var(--text-muted)'}">${p.status}</span>
+                <div class="card-image-wrap">
+                    <div class="card-badges">
+                        ${badgeHtml}
+                        <div class="card-menu">⋮</div>
                     </div>
+                    <img src="${imgSrc}" alt="Product">
+                </div>
+                <div class="card-content">
+                    <div class="card-price-row">
+                        <span class="ai-status ${aiStatusClass}">${aiStatusText}</span>
+                        <span class="price">${price}</span>
+                    </div>
+                    <div class="card-title">${p.name}</div>
+                    <div class="card-meta">SKU ${p.sku || '---'} &middot; ID ${p.id}</div>
+                    <button class="btn-open-editor">✨ Open AI editor</button>
                 </div>
             `;
             
@@ -455,18 +463,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Створення рядка характеристики (з підтримкою випадаючого списку)
 function createAttributeRow(name = '', value = '', id = '', schema = null) {
     const row = document.createElement('div');
-    row.className = 'attr-row';
-    row.style = 'display: flex; gap: 8px; align-items: center; margin-bottom: 8px;';
+    row.className = 'attr-item';
+    row.style.position = 'relative';
     
-    let valueInputHtml = `<input type="text" class="input attr-value" placeholder="Значення (напр. Білий)" value="${value}" style="flex: 1; padding: 4px;">`;
-    let nameHtml = `<input type="text" class="input attr-name" placeholder="Назва (напр. Колір)" value="${name}" data-id="${id}" style="flex: 1; padding: 4px;">`;
+    let valueInputHtml = `<input type="text" class="edit-input attr-value" placeholder="Значення (напр. Білий)" value="${value}">`;
+    let nameHtml = `<input type="text" class="edit-input attr-name" placeholder="Назва (напр. Колір)" value="${name}" data-id="${id}" style="padding: 4px 8px; margin-bottom: 4px; font-size: 0.85rem;">`;
     let unitHtml = '';
     
     // Якщо у нас є схема з бази Прому для цієї характеристики
     if (schema) {
-        nameHtml = `<input type="text" class="input attr-name" value="${schema.name}" data-id="${schema.id}" readonly style="flex: 1; padding: 4px; background: #f0f0f0; border-color: #ddd;">`;
+        nameHtml = `<span class="attr-name-display" data-id="${schema.id}">${schema.name}</span> <input type="hidden" class="attr-name" value="${schema.name}" data-id="${schema.id}">`;
         if (schema.unit) {
-            unitHtml = `<span class="attr-unit" style="color: #666; font-size: 0.9em; width: 30px; text-align: center;">${schema.unit}</span>`;
+            unitHtml = `<span class="attr-unit" style="color: var(--text-muted); font-size: 0.8rem; padding-left: 4px;">${schema.unit}</span>`;
         }
         
         if (schema.values && schema.values.length > 0) {
@@ -480,16 +488,16 @@ function createAttributeRow(name = '', value = '', id = '', schema = null) {
                 // Додаємо поточні значення, якщо їх немає в списку
                 currentValues.forEach(val => {
                     if (val && !schema.values.includes(val)) {
-                        checkboxesHtml += `<label style="display: block; margin-bottom: 4px; font-size: 0.9em;"><input type="checkbox" value="${val}" checked> ${val} (поточне)</label>`;
+                        checkboxesHtml += `<label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 0.85rem;"><input type="checkbox" value="${val}" checked> ${val} (поточне)</label>`;
                     }
                 });
                 
                 schema.values.forEach(v => {
                     const checked = currentValues.includes(v) ? 'checked' : '';
-                    checkboxesHtml += `<label style="display: block; margin-bottom: 4px; font-size: 0.9em;"><input type="checkbox" value="${v}" ${checked}> ${v}</label>`;
+                    checkboxesHtml += `<label style="display: flex; align-items: center; gap: 6px; margin-bottom: 4px; font-size: 0.85rem;"><input type="checkbox" value="${v}" ${checked}> ${v}</label>`;
                 });
                 
-                valueInputHtml = `<div class="attr-value multi-checkbox-container" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px; max-height: 250px; overflow-y: auto; background: #fff;">${checkboxesHtml}</div>`;
+                valueInputHtml = `<div class="attr-value multi-checkbox-container" style="padding: 8px; border: 1px solid var(--border); border-radius: var(--radius-sm); max-height: 150px; overflow-y: auto; background: white;">${checkboxesHtml}</div>`;
             } else {
                 // Звичайний випадаючий список
                 let options = `<option value="">-- Оберіть --</option>`;
@@ -500,18 +508,20 @@ function createAttributeRow(name = '', value = '', id = '', schema = null) {
                     const selected = v === value ? 'selected' : '';
                     options += `<option value="${v}" ${selected}>${v}</option>`;
                 });
-                valueInputHtml = `<select class="input attr-value" style="flex: 1; padding: 4px;">${options}</select>`;
+                valueInputHtml = `<select class="edit-input attr-value">${options}</select>`;
             }
         }
     }
     
     row.innerHTML = `
-        ${nameHtml}
-        <div style="flex: 1; display: flex; gap: 4px; align-items: center;">
+        <label style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 4px;">
+            ${nameHtml}
+            <button class="btn-delete remove-attr-btn" title="Видалити" style="font-size:1rem; line-height:1; padding:0;">✕</button>
+        </label>
+        <div style="display: flex; align-items: center; gap: 4px;">
             ${valueInputHtml}
             ${unitHtml}
         </div>
-        <button class="btn icon-btn remove-attr-btn" title="Видалити" style="color: #ff4d4f; padding: 4px; flex-shrink: 0;">❌</button>
     `;
     
     row.querySelector('.remove-attr-btn').addEventListener('click', (e) => {
@@ -615,8 +625,14 @@ async function openModal(summaryProduct) {
         // Ключові слова (на Prom.ua вони спільні, але для зручності ми їх ділимо якщо можна)
         const currentKeywords = product.keywords || '';
         
-        document.getElementById('modal-title').textContent = `Редагування: ${currentNameUk}`;
+        document.getElementById('modal-title').textContent = currentNameUk || 'Редагування товару';
+        document.getElementById('modal-sku').textContent = product.sku || '---';
+        document.getElementById('modal-id').textContent = product.id;
         document.getElementById('modal-img').src = product.main_image || summaryProduct.main_image || 'https://via.placeholder.com/250';
+        
+        document.getElementById('current-price').textContent = product.price ? `${product.price} ${product.currency || '₴'}` : '0.00 ₴';
+        document.getElementById('current-stock').textContent = product.presence || 'Невідомо';
+        document.getElementById('current-cat-badge').textContent = product.group ? product.group.name : 'Категорія';
         
         document.getElementById('current-name').textContent = currentNameUk || 'Немає';
         document.getElementById('current-keywords').textContent = currentKeywords || 'Немає';
