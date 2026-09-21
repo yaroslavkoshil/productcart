@@ -840,6 +840,16 @@ async function openModal(summaryProduct) {
                 }
                 updateCounters();
                 setTimeout(window.triggerAutoResize, 10);
+                
+                // Автоматично запускаємо переклад на російську для текстових полів
+                if (['title', 'keywords', 'description'].includes(type)) {
+                    setTimeout(() => {
+                        const translateBtn = document.querySelector(`.translate-btn[data-target="${type}"]`);
+                        if (translateBtn && !translateBtn.disabled) {
+                            translateBtn.click();
+                        }
+                    }, 50);
+                }
 
             } catch (error) {
                 alert(error.message);
