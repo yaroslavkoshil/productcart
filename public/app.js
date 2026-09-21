@@ -390,6 +390,49 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (!response.ok) throw new Error('Не вдалося завантажити деталі товару');
             product = await response.json();
+            
+            // --- ЛОГІКА ДЛЯ РІЗНОВИДІВ (ВАРІАЦІЙ) ---
+            const existingWarning = document.getElementById('variation-warning');
+            if (existingWarning) existingWarning.remove();
+
+            if (product.is_variation && product.variation_base_id) {
+                try {
+                    const parentRes = await fetch(`${API_BASE}/products/${product.variation_base_id}?_t=${Date.now()}`, {
+                        headers: { 'x-prom-token': promToken }
+                    });
+                    if (parentRes.ok) {
+                        const parentProduct = await parentRes.json();
+                        
+                        // Якщо опис порожній, беремо з головного товару
+                        if (!product.description && parentProduct.description) {
+                            product.description = parentProduct.description;
+                        }
+                        if ((!product.description_multilang || !product.description_multilang.uk) && parentProduct.description_multilang) {
+                            product.description_multilang = parentProduct.description_multilang;
+                        }
+                        
+                        const warningHtml = `
+                            <div class="status-msg" style="color: #856404; background-color: #fff3cd; border-color: #ffeeba; margin-bottom: 15px; padding: 10px; border-radius: 4px; border: 1px solid;">
+                                ⚠️ Увага: Цей товар є <b>різновидом</b>. Його назва може відрізнятися, а опис підтягується з головного товару.<br>
+                                <button class="btn mt-2" id="open-parent-btn" style="background: var(--secondary); font-size: 0.9em; padding: 4px 10px;">Відкрити головний товар (ID: ${parentProduct.id})</button>
+                            </div>
+                        `;
+                        
+                        document.querySelector('.modal-body').insertAdjacentHTML('afterbegin', `<div id="variation-warning">${warningHtml}</div>`);
+                        
+                        setTimeout(() => {
+                            const parentBtn = document.getElementById('open-parent-btn');
+                            if (parentBtn) {
+                                parentBtn.onclick = () => openModal(parentProduct);
+                            }
+                        }, 100);
+                    }
+                } catch(e) {
+                    console.error("Failed to fetch parent product", e);
+                }
+            }
+            // ----------------------------------------
+            
         } catch (e) {
             alert(e.message);
             modal.style.display = 'none';
