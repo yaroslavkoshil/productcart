@@ -664,12 +664,50 @@ async function openModal(summaryProduct) {
                 }
             });
         } else {
-            const knownIds = Object.keys(promAttributesDb).join(', ');
             debugDiv.innerHTML = `⚠️ Категорія порталу: <b>${categoryName} (ID: ${categoryId || 'Немає'})</b>. <br>
-                Довідник для неї ще не завантажено! (В базі зараз є: ${knownIds}). <br>
-                Скиньте посилання для категорії ${categoryId} в чат, щоб додати її.`;
+                Довідник для неї ще не завантажено!<br>
+                Вставте XML-посилання на характеристики цієї категорії (можна взяти в кабінеті Prom.ua):<br>
+                <div style="display: flex; gap: 8px; margin-top: 5px;">
+                    <input type="text" id="cat-xml-input" class="input" placeholder="https://my.prom.ua/cabinet/export_categories/..." style="flex: 1; padding: 4px;">
+                    <button id="cat-xml-btn" class="btn secondary small">Завантажити довідник</button>
+                </div>
+            `;
             debugDiv.style.borderColor = "#ffe58f";
             debugDiv.style.background = "#fffbe6";
+            
+            setTimeout(() => {
+                const btn = document.getElementById('cat-xml-btn');
+                if (btn) {
+                    btn.addEventListener('click', async () => {
+                        const url = document.getElementById('cat-xml-input').value.trim();
+                        if (!url) return alert('Вставте посилання!');
+                        btn.disabled = true;
+                        btn.textContent = 'Завантажую...';
+                        try {
+                            const res = await fetch(`${API_BASE}/add-category`, {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ url })
+                            });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.error || 'Помилка завантаження');
+                            
+                            alert(`Успіх! Завантажено ${data.addedCount} категорій. Оновлюю вікно...`);
+                            
+                            // Оновлюємо локальну базу
+                            const attrsRes = await fetch('/data/attributes.json');
+                            promAttributesDb = await attrsRes.json();
+                            
+                            // Перевідкриваємо вікно, щоб характеристики з'явились
+                            openModal(currentEditingProduct);
+                        } catch (err) {
+                            alert(err.message);
+                            btn.disabled = false;
+                            btn.textContent = 'Завантажити довідник';
+                        }
+                    });
+                }
+            }, 100);
         }
         
         // Вставляємо повідомлення перед контейнером атрибутів

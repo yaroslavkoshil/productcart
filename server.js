@@ -1,7 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const fs = require('fs');
 const dotenv = require('dotenv');
 const path = require('path');
+const { XMLParser } = require('fast-xml-parser');
 const promApi = require('./services/prom-api');
 const anthropicService = require('./services/anthropic-service');
 
@@ -154,6 +156,78 @@ app.post('/api/save', async (req, res) => {
 
         res.json(data);
     } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Додавання нової категорії через XML посилання
+app.post('/api/add-category', async (req, res) => {
+    try {
+        const { url } = req.body;
+        if (!url) return res.status(400).json({ error: 'Не вказано URL' });
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error(`Не вдалося завантажити XML. Статус: ${response.status}`);
+        
+        const xmlData = await response.text();
+        
+        const parser = new XMLParser({
+            ignoreAttributes: false,
+            attributeNamePrefix: ""
+        });
+        const jsonObj = parser.parse(xmlData);
+
+        const DB_PATH = path.join(__dirname, 'public/data/attributes.json');
+        let db = {};
+        if (fs.existsSync(DB_PATH)) {
+            db = JSON.parse(fs.readFileSync(DB_PATH, 'utf8'));
+        }
+
+        if (!jsonObj.categories || !jsonObj.categories.category) {
+            throw new Error('Невірний формат XML: не знайдено categories.category');
+        }
+
+        const categories = jsonObj.categories.category;
+        const catList = Array.isArray(categories) ? categories : [categories];
+        let addedCount = 0;
+
+        for (const cat of catList) {
+            if (!cat) continue;
+            
+            const catId = cat.id;
+            const catName = cat.nameUK || cat.nameRU;
+            const attributes = [];
+            
+            if (cat.attribute) {
+                const attrs = cat.attribute;
+                const attrList = Array.isArray(attrs) ? attrs : [attrs];
+                
+                for (const attr of attrList) {
+                    if (!attr) continue;
+                    const attribute = {
+                        id: attr.id,
+                        name: attr.nameUK || attr.nameRU,
+                        type: attr.type,
+                        unit: attr.measureUnitUK || attr.measureUnitRU || ''
+                    };
+                    
+                    if (attr.attribute_value) {
+                        const values = Array.isArray(attr.attribute_value) ? attr.attribute_value : [attr.attribute_value];
+                        attribute.values = values.map(v => v.nameUK || v.nameRU).filter(Boolean);
+                    }
+                    attributes.push(attribute);
+                }
+            }
+            
+            db[catId] = { name: catName, attributes: attributes };
+            addedCount++;
+        }
+
+        fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
+        res.json({ success: true, addedCount });
+
+    } catch (error) {
+        console.error('Add category error:', error.message);
         res.status(500).json({ error: error.message });
     }
 });
