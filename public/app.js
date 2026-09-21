@@ -28,6 +28,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentGroupId = 'all';
     let allGroupsMap = {}; // зберігаємо дерево груп
     
+    // Черга для XLSX експорту
+    let exportQueue = [];
+    
     // Завантажуємо базу характеристик Прому
     let promAttributesDb = {};
     fetch('/data/attributes.json')
@@ -869,31 +872,27 @@ async function openModal(summaryProduct) {
         });
     });
 
-    // Кнопка збереження на Prom.ua
+    // Кнопка збереження в XLSX чергу
     document.getElementById('save-btn').addEventListener('click', async (e) => {
         const btn = e.target;
         const statusMsg = document.getElementById('save-status');
         
         btn.disabled = true;
-        btn.textContent = '💾 Зберігаю...';
         statusMsg.textContent = '';
 
         try {
-            const promToken = localStorage.getItem('promToken');
-            
             const nameUk = document.getElementById('ai-name-uk').value.trim();
             const nameRu = document.getElementById('ai-name-ru').value.trim();
             const descUk = document.getElementById('ai-desc-uk').value.trim();
             const descRu = document.getElementById('ai-desc-ru').value.trim();
-            const keywordsUk = document.getElementById('ai-keywords-uk').value.trim();
-            const keywordsRu = document.getElementById('ai-keywords-ru').value.trim();
+            let keywordsUk = document.getElementById('ai-keywords-uk').value.trim();
+            let keywordsRu = document.getElementById('ai-keywords-ru').value.trim();
             const newSku = document.getElementById('edit-sku').value.trim();
 
-            // Визначаємо базову мову магазину. Якщо в name_multilang є 'uk', значить базова мова - 'ru'.
             const isBaseRu = currentEditingProduct.name_multilang && currentEditingProduct.name_multilang.uk !== undefined;
 
-            // Збираємо характеристики
-            const attributes = [];
+            // Збираємо характеристики у формат Prom.ua (Назва: Значення; Назва2: Значення2)
+            let characteristicsArr = [];
             document.querySelectorAll('.attr-row').forEach(row => {
                 const nameInput = row.querySelector('.attr-name');
                 const valInput = row.querySelector('.attr-value');
@@ -905,83 +904,79 @@ async function openModal(summaryProduct) {
                 
                 if (valInput.classList.contains('multi-checkbox-container')) {
                     value = Array.from(valInput.querySelectorAll('input:checked')).map(cb => cb.value).join(', ');
-                } else if (valInput.tagName.toLowerCase() === 'select') {
-                    value = valInput.value.trim();
                 } else {
                     value = valInput.value.trim();
                 }
                 
                 if (name && value) {
-                    const attr = { name, value };
-                    if (nameInput.dataset.id) attr.id = parseInt(nameInput.dataset.id, 10);
-                    attributes.push(attr);
+                    characteristicsArr.push(`${name}: ${value}`);
                 }
             });
+            const characteristicsStr = characteristicsArr.join('; ');
 
-            let finalKeywordsUk = keywordsUk;
-            if (finalKeywordsUk.length > 1024) {
-                finalKeywordsUk = finalKeywordsUk.substring(0, 1024);
-                const lastComma = finalKeywordsUk.lastIndexOf(',');
-                if (lastComma > 0) finalKeywordsUk = finalKeywordsUk.substring(0, lastComma);
-            }
-            
-            let finalKeywordsRu = keywordsRu;
-            if (finalKeywordsRu.length > 1024) {
-                finalKeywordsRu = finalKeywordsRu.substring(0, 1024);
-                const lastComma = finalKeywordsRu.lastIndexOf(',');
-                if (lastComma > 0) finalKeywordsRu = finalKeywordsRu.substring(0, lastComma);
-            }
+            if (keywordsUk.length > 1024) keywordsUk = keywordsUk.substring(0, 1024);
+            if (keywordsRu.length > 1024) keywordsRu = keywordsRu.substring(0, 1024);
 
-            const updatedProduct = {
-                id: currentEditingProduct.id,
-                name: isBaseRu ? nameRu : nameUk, 
-                keywords: isBaseRu ? finalKeywordsRu : finalKeywordsUk, 
-                description: isBaseRu ? descRu : descUk,
-                parameters: attributes // Prom API V1 uses 'parameters' instead of 'attributes'
-            };
-            
-            const translationData = {
-                product_id: currentEditingProduct.id.toString(),
-                lang: isBaseRu ? 'uk' : 'ru',
-                name: isBaseRu ? nameUk : nameRu,
-                keywords: isBaseRu ? finalKeywordsUk : finalKeywordsRu,
-                description: isBaseRu ? descUk : descRu
+            // Формуємо об'єкт для XLSX
+            const exportItem = {
+                'Номер_товара': currentEditingProduct.id,
+                'Артикул': newSku || currentEditingProduct.sku || '',
+                'Название_укр': nameUk,
+                'Название_рус': nameRu,
+                'Описание_укр': descUk,
+                'Описание_рус': descRu,
+                'Ключевые_слова_укр': keywordsUk,
+                'Ключевые_слова_рус': keywordsRu,
+                'Характеристики': characteristicsStr
             };
 
-            const response = await fetch(`${API_BASE}/save`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'x-prom-token': promToken
-                },
-                body: JSON.stringify({ productData: updatedProduct, translationData: translationData })
-            });
-
-            if (!response.ok) {
-                const err = await response.json();
-                throw new Error(err.error || 'Помилка при збереженні');
+            // Додаємо в чергу (якщо вже є такий ID - замінюємо)
+            const existingIdx = exportQueue.findIndex(item => item['Номер_товара'] === exportItem['Номер_товара']);
+            if (existingIdx >= 0) {
+                exportQueue[existingIdx] = exportItem;
+            } else {
+                exportQueue.push(exportItem);
             }
-
-            statusMsg.textContent = '✅ Успішно збережено на Prom.ua!';
+            
+            // Оновлюємо UI
+            document.getElementById('export-widget').style.display = 'flex';
+            document.getElementById('export-count').textContent = `В черзі: ${exportQueue.length} товарів`;
+            
+            statusMsg.textContent = '✅ Додано до черги експорту!';
             statusMsg.className = 'status-msg success';
             
-            // Оновлюємо дані в локальному стейті
-            currentEditingProduct.name = updatedProduct.name;
-            currentEditingProduct.keywords = updatedProduct.keywords;
-            currentEditingProduct.description = updatedProduct.description;
-            currentEditingProduct.name_multilang = updatedProduct.name_multilang;
-            currentEditingProduct.description_multilang = updatedProduct.description_multilang;
-            currentEditingProduct.attributes = updatedProduct.attributes;
-
-            // Перемальовуємо каталог, щоб побачити нову назву
-            renderProducts(currentProducts);
+            // Закриваємо модалку через секунду
+            setTimeout(() => {
+                modal.style.display = 'none';
+            }, 800);
 
         } catch (error) {
             statusMsg.textContent = `❌ ${error.message}`;
             statusMsg.className = 'status-msg error';
         } finally {
             btn.disabled = false;
-            btn.textContent = '💾 Зберегти на Prom.ua';
+        }
+    });
+
+    // Завантаження XLSX файлу
+    document.getElementById('download-xlsx-btn').addEventListener('click', () => {
+        if (exportQueue.length === 0) return;
+        
+        try {
+            // Створюємо книгу та аркуш
+            const worksheet = XLSX.utils.json_to_sheet(exportQueue);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Export");
+            
+            // Завантажуємо файл
+            const dateStr = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(workbook, `prom_export_${dateStr}.xlsx`);
+            
+            // Можна очистити чергу після експорту (за бажанням)
+            // exportQueue = [];
+            // document.getElementById('export-widget').style.display = 'none';
+        } catch (e) {
+            alert('Помилка генерації Excel: ' + e.message);
         }
     });
 

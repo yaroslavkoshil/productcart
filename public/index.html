@@ -191,12 +191,18 @@
             </div>
             <div class="modal-footer">
                 <div id="save-status" class="status-msg"></div>
-                <button id="save-btn" class="btn primary">💾 Зберегти на Prom.ua</button>
+                <button id="save-btn" class="btn primary" style="background-color: #217346; border-color: #1e6c41;">📥 Додати до XLSX експорту</button>
             </div>
         </div>
     </div>
 
+    <div id="export-widget" class="export-widget" style="display: none; position: fixed; bottom: 30px; right: 30px; background: white; padding: 15px 20px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 1000; align-items: center; border: 1px solid #e2e8f0;">
+        <span id="export-count" style="font-weight: 600; margin-right: 15px; color: #1e293b;">В черзі: 0 товарів</span>
+        <button id="download-xlsx-btn" class="btn" style="background-color: #217346; color: white; border: none; font-weight: 600;">⬇️ Завантажити файл</button>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-    <script src="app.js?v=100"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="app.js?v=101"></script>
 </body>
 </html>
