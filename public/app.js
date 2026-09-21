@@ -453,26 +453,37 @@ function createAttributeRow(name = '', value = '', id = '', schema = null) {
         
         if (schema.values && schema.values.length > 0) {
             const isMulti = schema.type === 'multiselect';
-            const multiAttr = isMulti ? 'multiple' : '';
-            
-            // Якщо значення є (збережене з Прому), воно може бути через кому для multiselect
             const currentValues = value ? value.split(',').map(v => v.trim()) : [];
             
-            let options = isMulti ? '' : `<option value="">-- Оберіть --</option>`;
-            
-            // Додаємо поточні значення, якщо їх немає в списку
-            currentValues.forEach(val => {
-                if (val && !schema.values.includes(val)) {
-                    options += `<option value="${val}" selected>${val} (поточне)</option>`;
+            if (isMulti) {
+                // Малюємо контейнер з чекбоксами для мульти-вибору
+                let checkboxesHtml = '';
+                
+                // Додаємо поточні значення, якщо їх немає в списку
+                currentValues.forEach(val => {
+                    if (val && !schema.values.includes(val)) {
+                        checkboxesHtml += `<label style="display: block; margin-bottom: 4px; font-size: 0.9em;"><input type="checkbox" value="${val}" checked> ${val} (поточне)</label>`;
+                    }
+                });
+                
+                schema.values.forEach(v => {
+                    const checked = currentValues.includes(v) ? 'checked' : '';
+                    checkboxesHtml += `<label style="display: block; margin-bottom: 4px; font-size: 0.9em;"><input type="checkbox" value="${v}" ${checked}> ${v}</label>`;
+                });
+                
+                valueInputHtml = `<div class="attr-value multi-checkbox-container" style="flex: 1; padding: 4px; border: 1px solid #ddd; border-radius: 4px; max-height: 80px; overflow-y: auto; background: #fff;">${checkboxesHtml}</div>`;
+            } else {
+                // Звичайний випадаючий список
+                let options = `<option value="">-- Оберіть --</option>`;
+                if (value && !schema.values.includes(value)) {
+                    options += `<option value="${value}" selected>${value} (поточне)</option>`;
                 }
-            });
-            
-            schema.values.forEach(v => {
-                const selected = currentValues.includes(v) ? 'selected' : '';
-                options += `<option value="${v}" ${selected}>${v}</option>`;
-            });
-            
-            valueInputHtml = `<select class="input attr-value ${isMulti ? 'choices-multi' : ''}" ${multiAttr} style="flex: 1; padding: 4px;">${options}</select>`;
+                schema.values.forEach(v => {
+                    const selected = v === value ? 'selected' : '';
+                    options += `<option value="${v}" ${selected}>${v}</option>`;
+                });
+                valueInputHtml = `<select class="input attr-value" style="flex: 1; padding: 4px;">${options}</select>`;
+            }
         }
     }
     
@@ -659,20 +670,6 @@ async function openModal(summaryProduct) {
         Object.values(existingAttrsMap).forEach(attr => {
             attrContainer.appendChild(createAttributeRow(attr.name, attr.value, attr.id || ''));
         });
-        
-        // Ініціалізуємо Choices.js для multiselect полів
-        setTimeout(() => {
-            document.querySelectorAll('.choices-multi').forEach(el => {
-                new Choices(el, {
-                    removeItemButton: true,
-                    searchEnabled: true,
-                    searchPlaceholderValue: 'Пошук...',
-                    itemSelectText: '',
-                    noResultsText: 'Не знайдено',
-                    noChoicesText: 'Немає варіантів для вибору'
-                });
-            });
-        }, 50);
         
         document.getElementById('ai-name-uk').value = currentNameUk;
         document.getElementById('ai-name-ru').value = currentNameRu;
@@ -874,8 +871,10 @@ async function openModal(summaryProduct) {
                 const name = nameInput.value.trim();
                 let value = '';
                 
-                if (valInput.tagName.toLowerCase() === 'select' && valInput.multiple) {
-                    value = Array.from(valInput.selectedOptions).map(opt => opt.value).join(', ');
+                if (valInput.classList.contains('multi-checkbox-container')) {
+                    value = Array.from(valInput.querySelectorAll('input:checked')).map(cb => cb.value).join(', ');
+                } else if (valInput.tagName.toLowerCase() === 'select') {
+                    value = valInput.value.trim();
                 } else {
                     value = valInput.value.trim();
                 }
