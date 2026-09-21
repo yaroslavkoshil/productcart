@@ -12,7 +12,13 @@ const PORT = process.env.PORT || 3000;
 
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, 'public'), {
+    setHeaders: (res) => {
+        res.set('Cache-Control', 'no-cache, no-store, must-revalidate');
+        res.set('Pragma', 'no-cache');
+        res.set('Expires', '0');
+    }
+}));
 
 // Вимикаємо кешування для всіх API запитів
 app.use('/api', (req, res, next) => {
@@ -101,18 +107,17 @@ app.post('/api/generate', async (req, res) => {
     }
 });
 
-// 4.1 Перекласти контент (ШІ)
+// 4.1 Перекласти контент
 app.post('/api/translate', async (req, res) => {
     try {
         const anthropicToken = req.headers['x-anthropic-token'];
-        if (!anthropicToken) return res.status(401).json({ error: 'Anthropic токен не надано' });
-
         const { text, type } = req.body;
         if (!text) return res.status(400).json({ error: 'Текст для перекладу не надано' });
 
         const result = await anthropicService.translateText(anthropicToken, text, type);
         res.json({ result });
     } catch (error) {
+        console.error('Translation error on server:', error.message);
         res.status(500).json({ error: error.message });
     }
 });

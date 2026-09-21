@@ -1,4 +1,4 @@
-const API_BASE = 'http://localhost:3000/api';
+const API_BASE = '/api';
 
 document.addEventListener('DOMContentLoaded', () => {
     // Елементи DOM
@@ -90,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
             catalogSection.style.display = 'block';
             
             renderGroups(data.groups);
-            loadProducts(promToken);
         } catch (error) {
             showError(error.message);
         }
@@ -122,6 +121,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const expandedGroups = JSON.parse(localStorage.getItem('expandedGroups') || '{}');
         const lastGroupId = localStorage.getItem('lastGroupId') || 'all';
         const lastSearchQuery = localStorage.getItem('lastSearchQuery') || '';
+
+        // Автоматично розгортаємо всіх батьків збереженої категорії, щоб вона була видима
+        if (lastGroupId && lastGroupId !== 'all' && groupsMap[lastGroupId]) {
+            let curr = groupsMap[lastGroupId];
+            while (curr) {
+                const parentId = curr.parent_group_id || curr.parent_id;
+                if (parentId && groupsMap[parentId]) {
+                    expandedGroups[parentId] = true;
+                    curr = groupsMap[parentId];
+                } else {
+                    break;
+                }
+            }
+            localStorage.setItem('expandedGroups', JSON.stringify(expandedGroups));
+        }
 
         groupsList.innerHTML = '';
 
@@ -190,6 +204,13 @@ document.addEventListener('DOMContentLoaded', () => {
             currentGroupId = lastGroupId;
             const promToken = localStorage.getItem('promToken');
             loadProducts(promToken, lastGroupId, false);
+            
+            setTimeout(() => {
+                const activeEl = groupsList.querySelector('.group-item.active');
+                if (activeEl) {
+                    activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }
+            }, 100);
         }
     }
 
@@ -224,6 +245,19 @@ document.addEventListener('DOMContentLoaded', () => {
 
         currentGroupId = item.dataset.id;
         
+        // Якщо клікнули на категорію, що має підкатегорії — відкриваємо її
+        if (currentGroupId && currentGroupId !== 'all') {
+            const container = groupsList.querySelector(`[data-parent-id="${currentGroupId}"]`);
+            if (container && container.style.display === 'none') {
+                container.style.display = 'block';
+                const arrowEl = item.querySelector('.group-arrow');
+                if (arrowEl) arrowEl.textContent = '▼ ';
+                const exp = JSON.parse(localStorage.getItem('expandedGroups') || '{}');
+                exp[currentGroupId] = true;
+                localStorage.setItem('expandedGroups', JSON.stringify(exp));
+            }
+        }
+
         // Зберігаємо групу і скидаємо збережений пошук
         localStorage.setItem('lastGroupId', currentGroupId);
         localStorage.removeItem('lastSearchQuery');
@@ -329,6 +363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     searchInput.addEventListener('input', (e) => {
         const query = e.target.value.toLowerCase().trim();
         if (!query) {
+            localStorage.removeItem('lastSearchQuery');
             renderProducts(currentProducts);
             return;
         }
@@ -346,13 +381,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Глобальний пошук по всьому магазину
-    document.getElementById('search-btn').addEventListener('click', performGlobalSearch);
+    document.getElementById('search-btn').addEventListener('click', () => performGlobalSearch());
     searchInput.addEventListener('keypress', (e) => {
         if (e.key === 'Enter') performGlobalSearch();
     });
 
     async function performGlobalSearch(forceQuery = null) {
-        const query = forceQuery || searchInput.value.trim();
+        const query = forceQuery !== null ? forceQuery : searchInput.value.trim();
         if (!query) return;
 
         productsGrid.innerHTML = '<div class="loading">Шукаю по всьому магазину (це може зайняти час)...</div>';
@@ -361,7 +396,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Зберігаємо стан пошуку
         localStorage.setItem('lastSearchQuery', query);
-        localStorage.removeItem('lastGroupId');
 
         try {
             const token = localStorage.getItem('promToken');
@@ -589,22 +623,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 const anthropicToken = localStorage.getItem('anthropicToken');
-                const response = await fetch(`${API_BASE}/translate`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'x-anthropic-token': anthropicToken
-                    },
-                    body: JSON.stringify({
-                        text: sourceText,
-                        type: type
-                    })
-                });
+                let translated = '';
 
-                if (!response.ok) throw new Error('Помилка перекладу');
-                const data = await response.json();
+                // Спроба 1: Через бекенд
+                try {
+                    const response = await fetch(`${API_BASE}/translate`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'x-anthropic-token': anthropicToken || ''
+                        },
+                        body: JSON.stringify({
+                            text: sourceText,
+                            type: type
+                        })
+                    });
 
-                document.getElementById(targetFieldId).value = data.result;
+                    if (response.ok) {
+                        const data = await response.json();
+                        if (data && data.result) {
+                            translated = data.result;
+                        }
+                    } else {
+                        const err = await response.json().catch(() => ({}));
+                        console.warn('Backend translation failed:', err.error);
+                    }
+                } catch (netErr) {
+                    console.warn('Backend translation network error:', netErr.message);
+                }
+
+                // Спроба 2: Прямий переклад Google у браузері (якщо хостинг блокує бекенд)
+                if (!translated) {
+                    try {
+                        const postData = new URLSearchParams({ q: sourceText });
+                        const gResponse = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=uk&tl=ru&dt=t', {
+                            method: 'POST',
+                            body: postData
+                        });
+                        if (gResponse.ok) {
+                            const gData = await gResponse.json();
+                            if (gData && Array.isArray(gData[0])) {
+                                translated = gData[0].map(part => (part && part[0]) ? part[0] : '').join('');
+                            }
+                        }
+                    } catch (browserGoogleErr) {
+                        console.warn('Browser Google translate error:', browserGoogleErr.message);
+                    }
+                }
+
+                if (!translated) {
+                    throw new Error('Помилка перекладу. Будь ласка, перевірте зʼєднання з інтернетом.');
+                }
+
+                document.getElementById(targetFieldId).value = translated;
                 updateCounters();
 
             } catch (error) {

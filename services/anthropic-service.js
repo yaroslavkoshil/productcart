@@ -122,19 +122,48 @@ class AnthropicService {
      * Перекладає текст на російську мову
      */
     async translateText(apiKey, text, type) {
-        // Використовуємо безкоштовний Google Translate API для надійності та швидкості
+        // 1. Пробуємо безкоштовний Google Translate API через POST (надійно, без ліміту довжини URL)
         try {
-            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=uk&tl=ru&dt=t&q=${encodeURIComponent(text)}`;
-            const response = await axios.get(url);
+            const postData = new URLSearchParams({ q: text });
+            const response = await axios.post(
+                'https://translate.googleapis.com/translate_a/single?client=gtx&sl=uk&tl=ru&dt=t',
+                postData.toString(),
+                {
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8',
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+                    },
+                    timeout: 10000
+                }
+            );
             const data = response.data;
-            
-            // Збираємо всі частини перекладу до купи
-            const translated = data[0].map(part => part[0]).join('');
-            return translated;
-        } catch (error) {
-            console.error('Translation error:', error.message);
-            throw new Error('Помилка перекладу (Google)');
+            if (data && Array.isArray(data[0])) {
+                const translated = data[0].map(part => (part && part[0]) ? part[0] : '').join('');
+                if (translated.trim()) {
+                    return translated;
+                }
+            }
+        } catch (googleError) {
+            console.warn('Google Translate API error:', googleError.message);
         }
+
+        // 2. Резервний варіант через Anthropic Claude (якщо Google заблоковано і є API ключ)
+        if (apiKey) {
+            try {
+                const client = this.getClient(apiKey);
+                const prompt = `Переклади наступний текст з української на російську мову. Збережи всі HTML-теги, структуру та форматування. Поверни ТІЛЬКИ перекладений текст без додаткових коментарів чи лапок:\n\n${text}`;
+                const msg = await client.messages.create({
+                    model: "claude-3-5-haiku-20241022",
+                    max_tokens: 2000,
+                    messages: [{ role: "user", content: prompt }]
+                });
+                return msg.content[0].text.trim();
+            } catch (claudeError) {
+                console.error('Anthropic translate fallback error:', claudeError.message);
+            }
+        }
+
+        throw new Error('Помилка перекладу. Перевірте з\'єднання або спробуйте пізніше.');
     }
 }
 
