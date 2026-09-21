@@ -246,9 +246,9 @@ app.post('/api/add-category', async (req, res) => {
         fs.writeFileSync(DB_PATH, JSON.stringify(db, null, 2), 'utf8');
         
         // Автоматично відправляємо зміни на GitHub
-        let pushCmd = 'git push';
+        let pushCmd = 'git push origin HEAD:main';
         if (process.env.GITHUB_TOKEN) {
-            pushCmd = 'git push https://yaroslavkoshil:$GITHUB_TOKEN@github.com/yaroslavkoshil/productcart.git main';
+            pushCmd = 'git push https://yaroslavkoshil:$GITHUB_TOKEN@github.com/yaroslavkoshil/productcart.git HEAD:main';
         }
         
         const gitSetup = 'git config user.email "bot@render.com" && git config user.name "Render Bot"';
