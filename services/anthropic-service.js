@@ -170,6 +170,76 @@ class AnthropicService {
     }
 
     /**
+     * Генерує атрибути (характеристики) на основі опису та схеми
+     */
+    async generateAttributes(apiKey, productContext, schema) {
+        const client = this.getClient(apiKey);
+        
+        const name = (productContext && productContext.name) ? productContext.name : '';
+        let desc = 'Немає';
+        if (productContext && productContext.description) {
+            if (typeof productContext.description === 'string') {
+                desc = productContext.description;
+            } else if (typeof productContext.description === 'object' && productContext.description.uk) {
+                desc = String(productContext.description.uk);
+            }
+        }
+        
+        // Формуємо текст схеми для ШІ
+        let schemaText = '';
+        if (schema && schema.attributes) {
+            schema.attributes.forEach(attr => {
+                if (attr.values && attr.values.length > 0) {
+                    schemaText += `- ID: ${attr.id}, Назва: "${attr.name}", Тип: ${attr.type}\n`;
+                    schemaText += `  Дозволені значення: ${JSON.stringify(attr.values)}\n`;
+                }
+            });
+        }
+
+        const prompt = `Ти — експерт з маркетплейсу Prom.ua. Твоя задача — заповнити характеристики товару на основі його назви та опису.
+Вимоги та ОБМЕЖЕННЯ (КРИТИЧНО ВАЖЛИВО):
+1. Ти маєш право вибирати значення ТІЛЬКИ зі списку "Дозволені значення" для кожної характеристики.
+2. Якщо в описі чи назві товару НЕМАЄ прямої інформації про характеристику — ПРОПУСТИ ЇЇ.
+3. КАТЕГОРИЧНО ЗАБОРОНЕНО вигадувати значення або писати те, в чому ти не впевнений.
+4. Для типу "multiselect" ти можеш повернути масив з кількох дозволених значень (наприклад ["Зволоження", "Відновлення"]). Для "singleselect" — тільки один рядок.
+5. Поверни результат ВИКЛЮЧНО у форматі валідного JSON об'єкта, де ключі — це ID характеристики (як рядки), а значення — це вибране значення (рядок) або масив значень. БЕЗ markdown-розмітки, БЕЗ пояснень.
+
+Приклад вихідного JSON:
+{
+  "123": "Білий",
+  "456": ["Для жінок", "Унісекс"]
+}
+
+Дані про товар:
+Назва: ${name}
+Опис: ${desc}
+
+Доступні характеристики для заповнення:
+${schemaText}`;
+
+        try {
+            const msg = await client.messages.create({
+                model: "claude-sonnet-4-5-20250929", // Використовуємо sonnet для кращого аналізу
+                max_tokens: 1000,
+                messages: [{ role: "user", content: prompt }]
+            });
+            
+            let resultText = msg.content[0].text.trim();
+            // Очищення від markdown якщо раптом є
+            if (resultText.startsWith('```json')) {
+                resultText = resultText.replace(/^```json/, '').replace(/```$/, '');
+            } else if (resultText.startsWith('```')) {
+                resultText = resultText.replace(/^```/, '').replace(/```$/, '');
+            }
+            
+            return JSON.parse(resultText.trim());
+        } catch (error) {
+            console.error('Anthropic generateAttributes error:', error);
+            throw new Error(`Помилка ШІ (генерація атрибутів): ${formatAnthropicError(error)}`);
+        }
+    }
+
+    /**
      * Перекладає текст на російську мову
      */
     async translateText(apiKey, text, type) {

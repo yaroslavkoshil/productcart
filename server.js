@@ -90,7 +90,7 @@ app.post('/api/generate', async (req, res) => {
             return res.status(401).json({ error: 'Anthropic токен не надано. Введіть токен у формі підключення.' });
         }
 
-        const { product, type } = req.body;
+        const { product, type, schema } = req.body;
         if (!product) {
             return res.status(400).json({ error: 'Дані товару не передано' });
         }
@@ -102,6 +102,8 @@ app.post('/api/generate', async (req, res) => {
             result = await anthropicService.generateKeywords(anthropicToken, product);
         } else if (type === 'description') {
             result = await anthropicService.generateDescription(anthropicToken, product);
+        } else if (type === 'attributes') {
+            result = await anthropicService.generateAttributes(anthropicToken, product, schema);
         } else {
             return res.status(400).json({ error: 'Невідомий тип генерації' });
         }

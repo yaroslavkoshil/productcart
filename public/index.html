@@ -107,16 +107,7 @@
                         <input type="text" id="edit-sku" class="input">
                     </div>
 
-                    <div class="data-group mb-15">
-                        <div class="label-with-action">
-                            <label>Характеристики (Атрибути):</label>
-                            <button class="btn secondary small" id="add-attr-btn">+ Додати</button>
-                        </div>
-                        <div id="attributes-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
-                            <!-- Attributes will be rendered here -->
-                        </div>
-                    </div>
-                    
+
                     <div class="data-group">
                         <div class="label-with-action">
                             <label>Нова Назва (до 110 симв.):</label>
@@ -181,6 +172,19 @@
                                 <button class="btn icon-btn translate-btn" data-target="description" title="Перекласти з укр">🌐 Перекласти на RU</button>
                             </div>
                             <textarea id="ai-desc-ru" class="edit-input desc-input" rows="6"></textarea>
+                        </div>
+                    </div>
+
+                    <div class="data-group mt-2">
+                        <div class="label-with-action">
+                            <label>Характеристики (Атрибути):</label>
+                            <div>
+                                <button class="btn secondary small gen-btn" data-type="attributes" title="Заповнити на основі опису">✨ Згенерувати</button>
+                                <button class="btn secondary small" id="add-attr-btn">+ Додати</button>
+                            </div>
+                        </div>
+                        <div id="attributes-container" style="display: flex; flex-direction: column; gap: 8px; margin-top: 5px;">
+                            <!-- Attributes will be rendered here -->
                         </div>
                     </div>
                 </div>

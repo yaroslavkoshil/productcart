@@ -704,16 +704,27 @@ async function openModal(summaryProduct) {
                     throw new Error('Anthropic токен відсутній! Будь ласка, натисніть "Відключитись" вгорі та повторно введіть ваш API ключ Claude.');
                 }
 
+                let requestBody = {
+                    product: currentEditingProduct,
+                    type: type
+                };
+                
+                if (type === 'attributes') {
+                    const categoryId = currentEditingProduct.category ? currentEditingProduct.category.id : null;
+                    const catSchema = categoryId && promAttributesDb[categoryId] ? promAttributesDb[categoryId] : null;
+                    if (!catSchema) {
+                        throw new Error('Довідник для цієї категорії не завантажено! Будь ласка, спочатку завантажте його (повідомлення над атрибутами).');
+                    }
+                    requestBody.schema = catSchema;
+                }
+
                 const response = await fetch(`${API_BASE}/generate`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'x-anthropic-token': anthropicToken
                     },
-                    body: JSON.stringify({
-                        product: currentEditingProduct,
-                        type: type
-                    })
+                    body: JSON.stringify(requestBody)
                 });
 
                 if (!response.ok) {
@@ -725,12 +736,33 @@ async function openModal(summaryProduct) {
 
                 if (type === 'title') {
                     document.getElementById('ai-name-uk').value = textRes || '';
-                }
-                if (type === 'keywords') {
+                } else if (type === 'keywords') {
                     document.getElementById('ai-keywords-uk').value = textRes || '';
-                }
-                if (type === 'description') {
+                } else if (type === 'description') {
                     document.getElementById('ai-desc-uk').value = textRes || '';
+                } else if (type === 'attributes') {
+                    if (typeof textRes === 'object') {
+                        Object.keys(textRes).forEach(id => {
+                            const val = textRes[id];
+                            const nameInput = document.querySelector(`.attr-name[data-id="${id}"]`);
+                            if (nameInput) {
+                                const row = nameInput.closest('.attr-row');
+                                const valInput = row.querySelector('.attr-value');
+                                
+                                if (valInput.classList.contains('multi-checkbox-container')) {
+                                    const valArray = Array.isArray(val) ? val : [val];
+                                    valInput.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                                        cb.checked = valArray.includes(cb.value);
+                                    });
+                                } else if (valInput.tagName.toLowerCase() === 'select') {
+                                    valInput.value = Array.isArray(val) ? val[0] : val;
+                                } else {
+                                    valInput.value = Array.isArray(val) ? val.join(', ') : val;
+                                }
+                            }
+                        });
+                        alert('Характеристики успішно згенеровані та підставлені!');
+                    }
                 }
                 updateCounters();
 
