@@ -1222,4 +1222,67 @@ async function openModal(summaryProduct) {
             }
         });
     }
+    
+    // Магічне автозаповнення
+    const autoFillBtn = document.getElementById('auto-fill-all-btn');
+    if (autoFillBtn) {
+        autoFillBtn.addEventListener('click', async (e) => {
+            const mainBtn = e.target;
+            const originalText = mainBtn.innerHTML;
+            mainBtn.disabled = true;
+            mainBtn.textContent = '⏳ Заповнюю...';
+            
+            try {
+                // Helper to wait for a button to finish spinning
+                const waitForBtn = (btn) => {
+                    return new Promise(resolve => {
+                        if (!btn.disabled) return resolve();
+                        const interval = setInterval(() => {
+                            if (!btn.disabled) {
+                                clearInterval(interval);
+                                resolve();
+                            }
+                        }, 200);
+                    });
+                };
+
+                // 1. Опис та його переклад
+                const descBtn = document.querySelector('.gen-btn[data-type="description"]');
+                if (descBtn) {
+                    descBtn.click();
+                    await waitForBtn(descBtn);
+                    await new Promise(r => setTimeout(r, 100)); // Чекаємо на старт автоперекладу
+                    const descTransBtn = document.querySelector('.translate-btn[data-target="description"]');
+                    if (descTransBtn) await waitForBtn(descTransBtn);
+                }
+                
+                // 2. Ключові слова та їх переклад
+                const kwBtn = document.querySelector('.gen-btn[data-type="keywords"]');
+                if (kwBtn) {
+                    kwBtn.click();
+                    await waitForBtn(kwBtn);
+                    await new Promise(r => setTimeout(r, 100)); // Чекаємо на старт автоперекладу
+                    const kwTransBtn = document.querySelector('.translate-btn[data-target="keywords"]');
+                    if (kwTransBtn) await waitForBtn(kwTransBtn);
+                }
+                
+                // 3. Характеристики
+                const attrBtn = document.querySelector('.gen-btn[data-type="attributes"]');
+                if (attrBtn) {
+                    attrBtn.click();
+                    await waitForBtn(attrBtn);
+                }
+                
+                mainBtn.textContent = '✅ Готово!';
+                setTimeout(() => {
+                    mainBtn.innerHTML = originalText;
+                    mainBtn.disabled = false;
+                }, 2000);
+            } catch (err) {
+                console.error(err);
+                mainBtn.innerHTML = originalText;
+                mainBtn.disabled = false;
+            }
+        });
+    }
 });
