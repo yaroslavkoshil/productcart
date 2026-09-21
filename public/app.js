@@ -719,18 +719,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const updatedProduct = {
                 id: currentEditingProduct.id,
-                sku: newSku,
                 name: nameUk || currentEditingProduct.name, // дефолт для базового поля
                 keywords: keywordsUk || currentEditingProduct.keywords, // базова мова - укр
-                description: descUk || currentEditingProduct.description,
-                name_multilang: {
-                    ru: nameRu,
-                    uk: nameUk
-                },
-                description_multilang: {
-                    ru: descRu,
-                    uk: descUk
-                }
+                description: descUk || currentEditingProduct.description
             };
             
             const translationData = {
