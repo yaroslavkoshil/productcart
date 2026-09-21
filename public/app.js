@@ -762,6 +762,8 @@ document.addEventListener('DOMContentLoaded', () => {
             currentEditingProduct.name = updatedProduct.name;
             currentEditingProduct.keywords = updatedProduct.keywords;
             currentEditingProduct.description = updatedProduct.description;
+            currentEditingProduct.name_multilang = updatedProduct.name_multilang;
+            currentEditingProduct.description_multilang = updatedProduct.description_multilang;
 
             // Перемальовуємо каталог, щоб побачити нову назву
             renderProducts(currentProducts);

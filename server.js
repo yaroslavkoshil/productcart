@@ -137,6 +137,13 @@ app.post('/api/save', async (req, res) => {
         
         // 1. Оновлюємо основні дані (УКР)
         const data = await promApi.editProduct(promToken, productData);
+        
+        // Перевіряємо чи Prom повернув помилку валідації
+        if (data && data.errors && Object.keys(data.errors).length > 0) {
+            const firstError = Object.values(data.errors)[0];
+            const errorMsg = typeof firstError === 'object' ? JSON.stringify(firstError) : firstError;
+            return res.status(400).json({ error: 'Відмова Prom.ua: ' + errorMsg });
+        }
 
         // 2. Оновлюємо переклад (РУС) якщо є
         if (translationData) {
