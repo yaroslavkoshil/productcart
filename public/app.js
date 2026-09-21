@@ -915,7 +915,7 @@ async function openModal(summaryProduct) {
                 let value = '';
                 
                 if (valInput.classList.contains('multi-checkbox-container')) {
-                    value = Array.from(valInput.querySelectorAll('input:checked')).map(cb => cb.value).join(', ');
+                    value = Array.from(valInput.querySelectorAll('input:checked')).map(cb => cb.value).join('|');
                 } else {
                     value = valInput.value.trim();
                 }
