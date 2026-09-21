@@ -91,6 +91,15 @@ class AnthropicService {
     async generateKeywords(apiKey, productContext) {
         const client = this.getClient(apiKey);
         const name = (productContext && productContext.name) ? productContext.name : '';
+        
+        let desc = 'Немає';
+        if (productContext && productContext.description) {
+            if (typeof productContext.description === 'string') {
+                desc = productContext.description.substring(0, 500) + '...';
+            } else if (typeof productContext.description === 'object' && productContext.description.uk) {
+                desc = String(productContext.description.uk).substring(0, 500) + '...';
+            }
+        }
 
         const prompt = `Ти професійний SEO-спеціаліст маркетплейсу Prom.ua. Згенеруй пошукові запити (keywords) для товару.
 Правила:
@@ -100,8 +109,10 @@ class AnthropicService {
 4. Довжина тексту має бути близько 800-1000 символів.
 5. МОВА: СУВОРО 100% УКРАЇНСЬКА! Категорично заборонено використовувати російські слова (наприклад "защита", "цвета"). Жодної транслітерації.
 6. Бренд або англійські назви (наприклад You Look Professional) можна залишити англійською.
+7. КАТЕГОРИЧНО ЗАБОРОНЕНО придумувати розмір, об'єм (наприклад "1000 мл", "1 літр", "великий обсяг" чи "економна упаковка"), вагу або інші характеристики, якщо вони чітко не вказані в назві або описі нижче. Нічого не вигадуй від себе!
 
 Товар: ${name}
+Опис: ${desc}
 
 Згенеруй ідеальні ключові слова.
 Поверни ТІЛЬКИ рядок з ключовими словами, без пояснень і лапок.`;
