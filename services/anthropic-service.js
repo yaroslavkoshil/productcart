@@ -29,20 +29,16 @@ class AnthropicService {
 Шлях категорії: ${productContext.categoryPath || productContext.group || 'Не вказано'}
 Опис: ${productContext.description ? productContext.description.substring(0, 300) + '...' : 'Немає'}
 
-Згенеруй ідеальну назву українською мовою та одразу переклади її на російську.
-Відповідь має бути ТІЛЬКИ у форматі JSON:
-{
-  "uk": "Назва українською (до 110 симв.)",
-  "ru": "Название на русском (до 110 симв.)"
-}`;
+Згенеруй ідеальну назву українською мовою.
+У відповіді поверни ТІЛЬКИ текст назви, без лапок чи пояснень.`;
 
         try {
             const msg = await client.messages.create({
                 model: "claude-haiku-4-5-20251001",
-                max_tokens: 300,
+                max_tokens: 150,
                 messages: [{ role: "user", content: prompt }]
             });
-            return this.extractJson(msg.content[0].text);
+            return msg.content[0].text.trim().replace(/^"|"$/g, '');
         } catch (error) {
             console.error('Anthropic generateTitle error:', error);
             throw new Error('Помилка генерації назви ШІ (Anthropic)');
@@ -59,25 +55,21 @@ class AnthropicService {
 Правила:
 1. Ключові слова мають бути розділені комою та пробілом (, ).
 2. Згенеруй багато релевантних ключів, які реально шукають люди, щоб охопити максимальну аудиторію. Включай синоніми, можливі помилки розкладки, сленг.
-3. Довжина тексту для КОЖНОЇ мови має бути від 900 до 1020 символів.
+3. Довжина тексту має бути від 900 до 1020 символів.
 
 Товар: ${productContext.name}
 Шлях категорії: ${productContext.categoryPath || productContext.group || 'Не вказано'}
 
-Згенеруй пул ключів українською мовою, а потім переклади ці ж ключі російською мовою.
-Відповідь має бути ТІЛЬКИ у форматі JSON:
-{
-  "uk": "ключ 1, ключ 2, ... (900-1020 символів)",
-  "ru": "ключ 1, ключ 2, ... (900-1020 символів)"
-}`;
+Згенеруй пул ключів українською мовою.
+Поверни ТІЛЬКИ рядок з ключовими словами, без пояснень.`;
 
         try {
             const msg = await client.messages.create({
                 model: "claude-haiku-4-5-20251001",
-                max_tokens: 1000,
+                max_tokens: 500,
                 messages: [{ role: "user", content: prompt }]
             });
-            return this.extractJson(msg.content[0].text);
+            return msg.content[0].text.trim();
         } catch (error) {
             console.error('Anthropic generateKeywords error:', error);
             throw new Error('Помилка генерації ключових слів ШІ (Anthropic)');
@@ -92,7 +84,7 @@ class AnthropicService {
 
         const prompt = `Ти професійний копірайтер для e-commerce. Напиши продаючий опис для товару.
 Вимоги:
-1. Формат: HTML (використовуй <h3>, <ul>, <li>, <strong>, <p>).
+1. Формат: HTML (використовуй <h3>, <ul>, <li>, <strong>, <p>). Не використовуй теги <html> чи <body>.
 2. Опис має бути релевантним товару, нічого самому не придумувати, тільки те що пишуть в інтернеті про цей товар інші магазини.
 3. Опис має бути розширеним і продаючим, щоб людина захотіла купити цей товар у нас.
 
@@ -101,35 +93,64 @@ class AnthropicService {
 Ціна: ${productContext.price} ${productContext.currency}
 Поточний опис (якщо є): ${productContext.description || 'Немає'}
 
-Напиши опис українською мовою та відразу переклади його російською.
-Відповідь має бути ТІЛЬКИ у форматі JSON:
-{
-  "uk": "<h3>Укр заголовок...</h3><p>...",
-  "ru": "<h3>Русский заголовок...</h3><p>..."
-}`;
+Напиши опис українською мовою. Поверни ТІЛЬКИ HTML-код опису без додаткових пояснень.`;
 
         try {
             const msg = await client.messages.create({
                 model: "claude-sonnet-4-5-20250929",
-                max_tokens: 3000,
+                max_tokens: 1500,
                 messages: [{ role: "user", content: prompt }]
             });
-            return this.extractJson(msg.content[0].text);
+            
+            let html = msg.content[0].text.trim();
+            // Очищення від маркдауну
+            if (html.startsWith('\`\`\`html')) {
+                html = html.replace(/^\`\`\`html/, '').replace(/\`\`\`$/, '');
+            } else if (html.startsWith('\`\`\`')) {
+                html = html.replace(/^\`\`\`/, '').replace(/\`\`\`$/, '');
+            }
+            return html.trim();
         } catch (error) {
             console.error('Anthropic generateDescription error:', error);
             throw new Error('Помилка генерації опису ШІ (Anthropic)');
         }
     }
 
-    extractJson(text) {
+    /**
+     * Перекладає текст на російську мову
+     */
+    async translateText(apiKey, text, type) {
+        const client = this.getClient(apiKey);
+        
+        let extraInstructions = "";
+        if (type === "title") extraInstructions = "Обмеження 110 символів. Тільки текст.";
+        else if (type === "keywords") extraInstructions = "Збережи розділення комою. Переклади всі ключі максимально точно і релевантно для пошуку. Тільки текст.";
+        else if (type === "description") extraInstructions = "Збережи всі HTML теги без змін. Переклади тільки текстовий вміст. Поверни тільки HTML код.";
+
+        const prompt = `Переклади наступний текст з української на російську мову для інтернет-магазину.
+Додаткові інструкції: ${extraInstructions}
+
+Текст для перекладу:
+${text}
+
+Поверни ТІЛЬКИ перекладений текст без лапок чи пояснень.`;
+
         try {
-            const start = text.indexOf('{');
-            const end = text.lastIndexOf('}') + 1;
-            const jsonStr = text.slice(start, end);
-            return JSON.parse(jsonStr);
-        } catch (e) {
-            console.error("Failed to parse JSON from AI response:", text);
-            throw new Error("Некоректна відповідь від ШІ (не JSON)");
+            const msg = await client.messages.create({
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 1500,
+                messages: [{ role: "user", content: prompt }]
+            });
+            
+            let result = msg.content[0].text.trim();
+            if (type === 'description') {
+                if (result.startsWith('\`\`\`html')) result = result.replace(/^\`\`\`html/, '').replace(/\`\`\`$/, '');
+                else if (result.startsWith('\`\`\`')) result = result.replace(/^\`\`\`/, '').replace(/\`\`\`$/, '');
+            }
+            return result.trim().replace(/^"|"$/g, '');
+        } catch (error) {
+            console.error('Anthropic translate error:', error);
+            throw new Error('Помилка перекладу ШІ (Anthropic)');
         }
     }
 }

@@ -437,19 +437,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 if (!response.ok) throw new Error('Помилка ШІ');
                 const data = await response.json();
-                const jsonRes = data.result; // JSON object: { uk: "...", ru: "..." }
+                const textRes = data.result;
 
                 if (type === 'title') {
-                    document.getElementById('ai-name-uk').value = jsonRes.uk || '';
-                    document.getElementById('ai-name-ru').value = jsonRes.ru || '';
+                    document.getElementById('ai-name-uk').value = textRes || '';
                 }
                 if (type === 'keywords') {
-                    document.getElementById('ai-keywords-uk').value = jsonRes.uk || '';
-                    document.getElementById('ai-keywords-ru').value = jsonRes.ru || '';
+                    document.getElementById('ai-keywords-uk').value = textRes || '';
                 }
                 if (type === 'description') {
-                    document.getElementById('ai-desc-uk').value = jsonRes.uk || '';
-                    document.getElementById('ai-desc-ru').value = jsonRes.ru || '';
+                    document.getElementById('ai-desc-uk').value = textRes || '';
                 }
                 updateCounters();
 
@@ -457,6 +454,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert(error.message);
             } finally {
                 e.target.textContent = originalText;
+                e.target.disabled = false;
+            }
+        });
+    });
+
+    // Кнопки перекладу на RU
+    document.querySelectorAll('.translate-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const type = e.target.dataset.target;
+            const originalText = e.target.innerHTML;
+            
+            let sourceText = '';
+            let targetFieldId = '';
+
+            if (type === 'title') {
+                sourceText = document.getElementById('ai-name-uk').value;
+                targetFieldId = 'ai-name-ru';
+            } else if (type === 'keywords') {
+                sourceText = document.getElementById('ai-keywords-uk').value;
+                targetFieldId = 'ai-keywords-ru';
+            } else if (type === 'description') {
+                sourceText = document.getElementById('ai-desc-uk').value;
+                targetFieldId = 'ai-desc-ru';
+            }
+
+            if (!sourceText.trim()) {
+                alert('Спочатку згенеруйте або напишіть текст українською!');
+                return;
+            }
+
+            e.target.textContent = '⏳ Перекладаю...';
+            e.target.disabled = true;
+
+            try {
+                const anthropicToken = localStorage.getItem('anthropicToken');
+                const response = await fetch(`${API_BASE}/translate`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'x-anthropic-token': anthropicToken
+                    },
+                    body: JSON.stringify({
+                        text: sourceText,
+                        type: type
+                    })
+                });
+
+                if (!response.ok) throw new Error('Помилка перекладу');
+                const data = await response.json();
+
+                document.getElementById(targetFieldId).value = data.result;
+                updateCounters();
+
+            } catch (error) {
+                alert(error.message);
+            } finally {
+                e.target.innerHTML = originalText;
                 e.target.disabled = false;
             }
         });

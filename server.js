@@ -71,7 +71,6 @@ app.post('/api/generate', async (req, res) => {
         if (!anthropicToken) return res.status(401).json({ error: 'Anthropic токен не надано' });
 
         const { product, type } = req.body;
-        // type може бути: 'title', 'keywords', 'description'
         
         let result = '';
         if (type === 'title') {
@@ -84,6 +83,22 @@ app.post('/api/generate', async (req, res) => {
             return res.status(400).json({ error: 'Невідомий тип генерації' });
         }
 
+        res.json({ result });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// 4.1 Перекласти контент (ШІ)
+app.post('/api/translate', async (req, res) => {
+    try {
+        const anthropicToken = req.headers['x-anthropic-token'];
+        if (!anthropicToken) return res.status(401).json({ error: 'Anthropic токен не надано' });
+
+        const { text, type } = req.body;
+        if (!text) return res.status(400).json({ error: 'Текст для перекладу не надано' });
+
+        const result = await anthropicService.translateText(anthropicToken, text, type);
         res.json({ result });
     } catch (error) {
         res.status(500).json({ error: error.message });
