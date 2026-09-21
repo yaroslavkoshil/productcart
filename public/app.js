@@ -1338,6 +1338,8 @@ async function openModal(summaryProduct) {
                 mainBtn.disabled = false;
             }
         });
+    }
+
     // === BULK MAGIC LOGIC ===
     const runBulkBtn = document.getElementById('run-bulk-magic-btn');
     const bulkOverlay = document.getElementById('bulk-progress-overlay');
