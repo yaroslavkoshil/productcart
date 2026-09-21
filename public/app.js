@@ -71,7 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function connectToApi(promToken, anthropicToken) {
         try {
-            const response = await fetch(`${API_BASE}/groups`, {
+            const response = await fetch(`${API_BASE}/groups?_t=${Date.now()}`, {
                 headers: { 'x-prom-token': promToken }
             });
 
@@ -231,11 +231,13 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         try {
-            let url = `${API_BASE}/products?limit=50`;
-            if (groupId && groupId !== 'all') url += `&group_id=${groupId}`;
-            if (lastProductId) url += `&last_id=${lastProductId}`;
+            const url = new URL(`${API_BASE}/products`, window.location.origin);
+            url.searchParams.append('limit', '50');
+            if (groupId && groupId !== 'all') url.searchParams.append('group_id', groupId);
+            if (lastProductId) url.searchParams.append('last_id', lastProductId);
+            url.searchParams.append('_t', Date.now());
 
-            const response = await fetch(url, { headers: { 'x-prom-token': promToken } });
+            const response = await fetch(url.toString(), { headers: { 'x-prom-token': promToken } });
             const data = await response.json();
             
             const newProducts = data.products || [];
@@ -349,7 +351,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const token = localStorage.getItem('promToken');
-            const response = await fetch(`${API_BASE}/products?query=${encodeURIComponent(query)}`, {
+            const url = new URL(`${API_BASE}/products`, window.location.origin);
+            url.searchParams.append('query', query);
+            url.searchParams.append('_t', Date.now());
+
+            const response = await fetch(url.toString(), {
                 headers: { 'x-prom-token': token }
             });
 
@@ -379,7 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
         let product;
         try {
             const promToken = localStorage.getItem('promToken');
-            const response = await fetch(`${API_BASE}/products/${summaryProduct.id}`, {
+            const response = await fetch(`${API_BASE}/products/${summaryProduct.id}?_t=${Date.now()}`, {
                 headers: { 'x-prom-token': promToken }
             });
             if (!response.ok) throw new Error('Не вдалося завантажити деталі товару');
