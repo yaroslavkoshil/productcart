@@ -117,15 +117,33 @@ app.post('/api/generate', async (req, res) => {
     }
 });
 
-// 4.1 Перекласти контент
+// 4.1 Перекласти контент (БЕЗКОШТОВНО через Google Translate API)
 app.post('/api/translate', async (req, res) => {
     try {
-        const anthropicToken = req.headers['x-anthropic-token'];
-        const { text, type } = req.body;
+        const { text } = req.body;
         if (!text) return res.status(400).json({ error: 'Текст для перекладу не надано' });
 
-        const result = await anthropicService.translateText(anthropicToken, text, type);
-        res.json({ result });
+        const postData = new URLSearchParams({ q: text });
+        const gResponse = await fetch('https://translate.googleapis.com/translate_a/single?client=gtx&sl=uk&tl=ru&dt=t', {
+            method: 'POST',
+            body: postData
+        });
+        
+        if (!gResponse.ok) {
+            throw new Error(`Google API помилка: ${gResponse.status}`);
+        }
+        
+        const gData = await gResponse.json();
+        let translated = '';
+        if (gData && Array.isArray(gData[0])) {
+            translated = gData[0].map(part => (part && part[0]) ? part[0] : '').join('');
+        }
+        
+        if (!translated) {
+            throw new Error('Не вдалося отримати переклад');
+        }
+
+        res.json({ result: translated });
     } catch (error) {
         console.error('Translation error on server:', error.message);
         res.status(500).json({ error: error.message });
