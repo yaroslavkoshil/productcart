@@ -479,6 +479,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelector('.copy-btn[data-target="description"]').dataset.ru = currentDescRu;
 
         // Очищаємо поля для нових значень
+        document.getElementById('edit-sku').value = product.sku || '';
         document.getElementById('ai-name-uk').value = currentNameUk;
         document.getElementById('ai-name-ru').value = currentNameRu;
         document.getElementById('ai-keywords-uk').value = currentKeywords;
@@ -619,9 +620,11 @@ document.addEventListener('DOMContentLoaded', () => {
             const descRu = document.getElementById('ai-desc-ru').value.trim();
             const keywordsUk = document.getElementById('ai-keywords-uk').value.trim();
             const keywordsRu = document.getElementById('ai-keywords-ru').value.trim();
+            const newSku = document.getElementById('edit-sku').value.trim();
 
             const updatedProduct = {
                 id: currentEditingProduct.id,
+                sku: newSku,
                 name: nameUk || currentEditingProduct.name, // дефолт для базового поля
                 keywords: keywordsUk || currentEditingProduct.keywords, // базова мова - укр
                 description: descUk || currentEditingProduct.description,
