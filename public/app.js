@@ -18,6 +18,45 @@ document.addEventListener('DOMContentLoaded', () => {
     const productsGrid = document.getElementById('products-grid');
     const productsCount = document.getElementById('products-count');
     const searchInput = document.getElementById('search-input');
+    
+    // Sidebar resizer
+    const resizer = document.getElementById('sidebar-resizer');
+    const sidebar = document.querySelector('.sidebar');
+    let isResizing = false;
+
+    // Відновлення ширини з localStorage
+    const savedSidebarWidth = localStorage.getItem('sidebarWidth');
+    if (savedSidebarWidth) {
+        document.documentElement.style.setProperty('--sidebar-width', `${savedSidebarWidth}px`);
+    }
+
+    resizer.addEventListener('mousedown', (e) => {
+        isResizing = true;
+        resizer.classList.add('is-resizing');
+        document.body.style.cursor = 'col-resize';
+        // Запобігаємо виділенню тексту під час перетягування
+        e.preventDefault();
+    });
+
+    document.addEventListener('mousemove', (e) => {
+        if (!isResizing) return;
+        // Обмеження ширини від 200px до 600px
+        const newWidth = Math.min(Math.max(e.clientX, 200), 600);
+        document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+    });
+
+    document.addEventListener('mouseup', () => {
+        if (isResizing) {
+            isResizing = false;
+            resizer.classList.remove('is-resizing');
+            document.body.style.cursor = '';
+            // Зберігаємо нову ширину
+            const finalWidth = getComputedStyle(document.documentElement).getPropertyValue('--sidebar-width').trim().replace('px', '');
+            if (finalWidth) {
+                localStorage.setItem('sidebarWidth', finalWidth);
+            }
+        }
+    });
 
     // Модальне вікно
     const modal = document.getElementById('product-modal');
@@ -634,7 +673,7 @@ async function openModal(summaryProduct) {
                             </div>
                         `;
                         
-                        document.querySelector('.modal-body').insertAdjacentHTML('afterbegin', `<div id="variation-warning">${warningHtml}</div>`);
+                        document.querySelector('.modal-body').insertAdjacentHTML('afterbegin', `<div id="variation-warning" style="grid-column: 1 / -1;">${warningHtml}</div>`);
                         
                         setTimeout(() => {
                             const parentBtn = document.getElementById('open-parent-btn');

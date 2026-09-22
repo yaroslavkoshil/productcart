@@ -43,13 +43,29 @@ body {
 
 /* Sidebar */
 .sidebar {
-    width: 260px;
+    width: var(--sidebar-width, 260px);
     background-color: var(--card-bg);
     border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     padding: 1.5rem 1rem;
     flex-shrink: 0;
+    transition: width 0.1s;
+}
+
+.sidebar-resizer {
+    width: 5px;
+    background-color: transparent;
+    cursor: col-resize;
+    position: relative;
+    z-index: 10;
+    margin-left: -3px;
+    margin-right: -2px;
+}
+
+.sidebar-resizer:hover, .sidebar-resizer.is-resizing {
+    background-color: var(--primary);
+    opacity: 0.5;
 }
 
 .logo-area {
