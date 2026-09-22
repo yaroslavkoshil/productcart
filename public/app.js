@@ -1393,6 +1393,24 @@ async function openModal(summaryProduct) {
             const ids = Array.from(selectedProductIds);
             if (ids.length === 0) return;
             
+            // PRE-FLIGHT CHECK: Verify all categories exist
+            const missingCategories = new Set();
+            const missingCategoryNames = new Set();
+            ids.forEach(id => {
+                const p = currentProducts.find(prod => String(prod.id) === String(id));
+                if (p && p.category_id && p.category_id !== '0' && p.category_id !== 0) {
+                    if (!promAttributesDb[p.category_id]) {
+                        missingCategories.add(p.category_id);
+                        missingCategoryNames.add(p.category?.name || p.category_id);
+                    }
+                }
+            });
+            
+            if (missingCategories.size > 0) {
+                alert(`Помилка! Відсутні довідники характеристик для таких категорій:\n\n${Array.from(missingCategoryNames).join('\n')}\n\nНеможливо запустити масове заповнення. Спочатку завантажте довідники для цих категорій (відкрийте один товар і вставте посилання з Prom).`);
+                return;
+            }
+            
             if (!confirm(`Ви впевнені, що хочете автоматично згенерувати контент для ${ids.length} товарів? Процес може зайняти декілька хвилин. Сторінку не закривати.`)) {
                 return;
             }
