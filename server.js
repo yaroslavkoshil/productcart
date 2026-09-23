@@ -5,7 +5,8 @@ const dotenv = require('dotenv');
 const path = require('path');
 const { XMLParser } = require('fast-xml-parser');
 const promApi = require('./services/prom-api');
-const anthropicService = require('./services/anthropic-service');
+// const anthropicService = require('./services/anthropic-service');
+const anthropicService = require('./services/experiential-service'); // Reusing variable name to avoid refactoring whole file
 
 dotenv.config();
 
