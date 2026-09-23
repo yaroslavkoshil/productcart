@@ -1070,6 +1070,11 @@ async function openModal(summaryProduct) {
 
             const isBaseRu = currentEditingProduct.name_multilang && currentEditingProduct.name_multilang.uk !== undefined;
 
+            // Оновлюємо поточний об'єкт, щоб не втратити SKU при повторному відкритті
+            currentEditingProduct.sku = newSku;
+            const prodIndex = currentProducts.findIndex(p => String(p.id) === String(currentEditingProduct.id));
+            if (prodIndex >= 0) currentProducts[prodIndex].sku = newSku;
+
             // Формуємо об'єкт для XLSX з правильними назвами колонок
             const exportItem = {
                 'Ідентифікатор_товару': currentEditingProduct.id,
@@ -1367,6 +1372,13 @@ async function openModal(summaryProduct) {
                 if (attrBtn) {
                     attrBtn.click();
                     await waitForBtn(attrBtn);
+                }
+
+                // 4. Авто-рандомізація SKU, якщо він порожній
+                const skuInput = document.getElementById('edit-sku');
+                const randBtn = document.getElementById('rand-sku-btn');
+                if (skuInput && (!skuInput.value || skuInput.value.trim() === '') && randBtn) {
+                    randBtn.click();
                 }
                 
                 mainBtn.textContent = '✅ Готово!';
