@@ -32,6 +32,29 @@ function formatAnthropicError(error) {
 
 class AnthropicService {
     /**
+     * Повторює операцію при помилках мережі чи лімітах
+     */
+    async withRetry(operation, maxRetries = 3, delayMs = 2000) {
+        let lastError;
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                return await operation();
+            } catch (error) {
+                lastError = error;
+                const msg = (error.message || '').toLowerCase();
+                // Не повторюємо для критичних помилок (баланс, ключ, поганий запит)
+                if (msg.includes('credit balance') || msg.includes('api key') || msg.includes('invalid_request_error') || msg.includes('authentication_error')) {
+                    throw error;
+                }
+                console.warn(`[Anthropic] Спроба ${i + 1} невдала, повтор через ${delayMs}мс... Помилка: ${error.message}`);
+                await new Promise(res => setTimeout(res, delayMs));
+                delayMs *= 1.5; // Збільшуємо затримку
+            }
+        }
+        throw lastError;
+    }
+
+    /**
      * Ініціалізує клієнт Anthropic з переданим ключем
      */
     getClient(apiKey) {
@@ -73,10 +96,12 @@ class AnthropicService {
 У відповіді поверни ТІЛЬКИ текст назви, без лапок чи пояснень.`;
 
         try {
-            const msg = await client.messages.create({
-                model: "claude-haiku-4-5-20251001",
-                max_tokens: 150,
-                messages: [{ role: "user", content: prompt }]
+            const msg = await this.withRetry(async () => {
+                return await client.messages.create({
+                    model: "claude-haiku-4-5-20251001",
+                    max_tokens: 150,
+                    messages: [{ role: "user", content: prompt }]
+                });
             });
             return msg.content[0].text.trim().replace(/^"|"$/g, '');
         } catch (error) {
@@ -129,10 +154,12 @@ class AnthropicService {
 Поверни ТІЛЬКИ рядок з ключовими словами через кому, без пояснень і лапок.`;
 
         try {
-            const msg = await client.messages.create({
-                model: "claude-sonnet-4-5-20250929", // Використовуємо sonnet для кращої якості і дотримання мови
-                max_tokens: 500,
-                messages: [{ role: "user", content: prompt }]
+            const msg = await this.withRetry(async () => {
+                return await client.messages.create({
+                    model: "claude-sonnet-4-5-20250929", // Використовуємо sonnet для кращої якості і дотримання мови
+                    max_tokens: 500,
+                    messages: [{ role: "user", content: prompt }]
+                });
             });
             return msg.content[0].text.trim();
         } catch (error) {
@@ -173,10 +200,12 @@ class AnthropicService {
 Напиши опис ВИКЛЮЧНО українською мовою. Поверни ТІЛЬКИ HTML-код опису без додаткових пояснень.`;
 
         try {
-            const msg = await client.messages.create({
-                model: "claude-sonnet-4-5-20250929",
-                max_tokens: 1500,
-                messages: [{ role: "user", content: prompt }]
+            const msg = await this.withRetry(async () => {
+                return await client.messages.create({
+                    model: "claude-sonnet-4-5-20250929",
+                    max_tokens: 1500,
+                    messages: [{ role: "user", content: prompt }]
+                });
             });
             
             let html = msg.content[0].text.trim();
@@ -245,10 +274,12 @@ class AnthropicService {
 ${schemaText}`;
 
         try {
-            const msg = await client.messages.create({
-                model: "claude-sonnet-4-5-20250929", // Використовуємо sonnet для кращого аналізу
-                max_tokens: 1000,
-                messages: [{ role: "user", content: prompt }]
+            const msg = await this.withRetry(async () => {
+                return await client.messages.create({
+                    model: "claude-sonnet-4-5-20250929", // Використовуємо sonnet для кращого аналізу
+                    max_tokens: 1000,
+                    messages: [{ role: "user", content: prompt }]
+                });
             });
             
             let resultText = msg.content[0].text.trim();
