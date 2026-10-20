@@ -1158,6 +1158,27 @@ async function openModal(summaryProduct) {
         });
     });
 
+    // Очищення та обрізання тексту для відповідності формату Excel (XLSX)
+    function cleanCellForExcel(val) {
+        if (val === null || val === undefined) return '';
+        let str = String(val);
+        
+        // Видаляємо невалідні XML керуючі символи
+        str = str.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+
+        // Якщо опис містить гігантські base64 картинки, очищуємо їх (Prom приймає лише URL посилання)
+        if (str.includes('data:image/')) {
+            str = str.replace(/src=["']data:image\/[^"']+["']/gi, 'src="" alt="image"');
+        }
+        
+        // Жорсткий ліміт Excel: максимум 32767 символів на клітинку
+        if (str.length > 32700) {
+            console.warn(`[Excel Export] Текст клітинки (${str.length} симв.) перевищує ліміт Excel (32767). Обрізано до 32700.`);
+            str = str.substring(0, 32700);
+        }
+        return str;
+    }
+
     // Кнопка збереження в XLSX чергу
     document.getElementById('save-btn').addEventListener('click', async (e) => {
         const btn = e.target;
@@ -1167,13 +1188,13 @@ async function openModal(summaryProduct) {
         statusMsg.textContent = '';
 
         try {
-            const nameUk = document.getElementById('ai-name-uk').value.trim();
-            const nameRu = document.getElementById('ai-name-ru').value.trim();
-            const descUk = document.getElementById('ai-desc-uk').value.trim();
-            const descRu = document.getElementById('ai-desc-ru').value.trim();
-            let keywordsUk = document.getElementById('ai-keywords-uk').value.trim();
-            let keywordsRu = document.getElementById('ai-keywords-ru').value.trim();
-            const newSku = document.getElementById('edit-sku').value.trim();
+            const nameUk = cleanCellForExcel(document.getElementById('ai-name-uk').value.trim());
+            const nameRu = cleanCellForExcel(document.getElementById('ai-name-ru').value.trim());
+            const descUk = cleanCellForExcel(document.getElementById('ai-desc-uk').value.trim());
+            const descRu = cleanCellForExcel(document.getElementById('ai-desc-ru').value.trim());
+            let keywordsUk = cleanCellForExcel(document.getElementById('ai-keywords-uk').value.trim());
+            let keywordsRu = cleanCellForExcel(document.getElementById('ai-keywords-ru').value.trim());
+            const newSku = cleanCellForExcel(document.getElementById('edit-sku').value.trim());
 
             const isBaseRu = currentEditingProduct.name_multilang && currentEditingProduct.name_multilang.uk !== undefined;
 
@@ -1204,8 +1225,8 @@ async function openModal(summaryProduct) {
                 
                 if (!nameInput || !valInput) return;
                 
-                const name = nameInput.value.trim();
-                const unit = unitSpan ? unitSpan.textContent.trim() : '';
+                const name = cleanCellForExcel(nameInput.value.trim());
+                const unit = unitSpan ? cleanCellForExcel(unitSpan.textContent.trim()) : '';
                 let value = '';
                 
                 if (valInput.classList.contains('multi-checkbox-container')) {
@@ -1213,6 +1234,7 @@ async function openModal(summaryProduct) {
                 } else {
                     value = valInput.value.trim();
                 }
+                value = cleanCellForExcel(value);
                 
                 if (name && value) {
                     exportItem._attributes.push({ name, value, unit });
@@ -1321,7 +1343,8 @@ async function openModal(summaryProduct) {
                     }
                 }
                 
-                aoa.push(row);
+                // Обов'язкове очищення та обмеження кожної клітинки до ліміту Excel (32767 символів)
+                aoa.push(row.map(val => cleanCellForExcel(val)));
             });
 
             // 4. Створюємо книгу та аркуш з формату AoA
