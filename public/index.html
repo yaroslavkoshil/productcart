@@ -87,13 +87,36 @@
                         </div>
                     </div>
                     
-                    <div id="bulk-action-bar" style="display: none; background: linear-gradient(135deg, #f8fafc, #f1f5f9); border: 1px solid var(--border); border-radius: var(--radius-md); padding: 12px 20px; margin-bottom: 20px; align-items: center; justify-content: space-between; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);">
-                        <div style="display: flex; align-items: center; gap: 12px;">
+                    <div id="bulk-action-bar" class="bulk-action-bar" style="display: none;">
+                        <div class="bulk-left">
                             <input type="checkbox" id="bulk-select-all" style="width: 18px; height: 18px; cursor: pointer;">
                             <span id="bulk-selected-count" style="font-weight: 600; color: var(--text);">0 вибрано</span>
                         </div>
-                        <div>
-                            <button id="run-bulk-magic-btn" class="btn-magic" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 8px 16px; font-weight: 600; font-size: 0.9rem; border-radius: 6px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); cursor: pointer; transition: all 0.2s;">
+                        <div class="bulk-options" id="bulk-gen-options">
+                            <span class="bulk-options-label">Генерувати:</span>
+                            <label class="gen-checkbox-pill" title="Генерувати пошукові SEO-ключі">
+                                <input type="checkbox" data-opt="keywords" class="bulk-opt-cb" checked>
+                                <span>🔑 Ключі</span>
+                            </label>
+                            <label class="gen-checkbox-pill" title="Генерувати опис товару">
+                                <input type="checkbox" data-opt="desc" class="bulk-opt-cb">
+                                <span>📝 Опис</span>
+                            </label>
+                            <label class="gen-checkbox-pill" title="Генерувати оптимізовану назву товару">
+                                <input type="checkbox" data-opt="title" class="bulk-opt-cb">
+                                <span>🏷️ Назва</span>
+                            </label>
+                            <label class="gen-checkbox-pill" title="Генерувати характеристики (потрібен довідник)">
+                                <input type="checkbox" data-opt="attributes" class="bulk-opt-cb">
+                                <span>⚙️ Характеристики</span>
+                            </label>
+                            <label class="gen-checkbox-pill" title="Автоматично перекладати згенероване на RU">
+                                <input type="checkbox" data-opt="translate" class="bulk-opt-cb" checked>
+                                <span>🌐 RU переклад</span>
+                            </label>
+                        </div>
+                        <div class="bulk-actions">
+                            <button id="run-bulk-magic-btn" class="btn-magic bulk-run-btn">
                                 🚀 Запустити Bulk Магію
                             </button>
                         </div>
@@ -198,8 +221,47 @@
                                 <p>Edit, generate, and translate every field</p>
                             </div>
                         </div>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <button id="auto-fill-all-btn" class="btn-magic" style="background: linear-gradient(135deg, #10b981, #059669); color: white; border: none; padding: 6px 14px; font-weight: 600; font-size: 0.85rem; border-radius: 6px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2); cursor: pointer; transition: all 0.2s;">🚀 Магічне автозаповнення</button>
+                        <div style="display: flex; gap: 10px; align-items: center; position: relative;">
+                            <div class="auto-fill-btn-group">
+                                <button id="auto-fill-all-btn" class="btn-magic auto-fill-main-btn" title="Автоматично згенерувати вибрані поля">🚀 Автозаповнення</button>
+                                <button id="modal-gen-settings-btn" class="auto-fill-cog-btn" title="Налаштування полів генерації" type="button">⚙️</button>
+                            </div>
+
+                            <!-- Popover for Modal Gen Options -->
+                            <div id="modal-gen-popover" class="modal-gen-popover" style="display: none;">
+                                <div class="popover-header">
+                                    <span>Що генерувати:</span>
+                                    <span style="font-size: 0.72rem; color: var(--text-light); font-weight: normal;">(зберігається)</span>
+                                </div>
+                                <div class="popover-body">
+                                    <label class="popover-opt-label">
+                                        <input type="checkbox" data-opt="keywords" class="modal-opt-cb" checked>
+                                        <span>🔑 SEO Ключі</span>
+                                    </label>
+                                    <label class="popover-opt-label">
+                                        <input type="checkbox" data-opt="desc" class="modal-opt-cb">
+                                        <span>📝 Опис товару</span>
+                                    </label>
+                                    <label class="popover-opt-label">
+                                        <input type="checkbox" data-opt="title" class="modal-opt-cb">
+                                        <span>🏷️ Назва товару</span>
+                                    </label>
+                                    <label class="popover-opt-label">
+                                        <input type="checkbox" data-opt="attributes" class="modal-opt-cb">
+                                        <span>⚙️ Характеристики</span>
+                                    </label>
+                                    <div class="popover-divider"></div>
+                                    <label class="popover-opt-label">
+                                        <input type="checkbox" data-opt="translate" class="modal-opt-cb" checked>
+                                        <span>🌐 Автопереклад (RU)</span>
+                                    </label>
+                                    <label class="popover-opt-label">
+                                        <input type="checkbox" data-opt="sku" class="modal-opt-cb">
+                                        <span>🎲 Випадковий SKU</span>
+                                    </label>
+                                </div>
+                            </div>
+
                             <div class="lang-badge-top">UK / RU</div>
                         </div>
                     </div>

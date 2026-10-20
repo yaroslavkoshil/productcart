@@ -67,6 +67,105 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentGroupId = 'all';
     let allGroupsMap = {}; // зберігаємо дерево груп
     let selectedProductIds = new Set();
+    window.isBulkRunning = false;
+
+    // === НАЛАШТУВАННЯ ПОЛІВ АВТОГЕНЕРАЦІЇ ===
+    const DEFAULT_GEN_OPTIONS = {
+        keywords: true,
+        desc: false,
+        title: false,
+        attributes: false,
+        translate: true,
+        sku: false
+    };
+
+    function getGenOptions() {
+        try {
+            const saved = localStorage.getItem('promGenOptions');
+            if (saved) return { ...DEFAULT_GEN_OPTIONS, ...JSON.parse(saved) };
+        } catch (e) {}
+        return { ...DEFAULT_GEN_OPTIONS };
+    }
+
+    function saveGenOptions(opts) {
+        localStorage.setItem('promGenOptions', JSON.stringify(opts));
+        syncGenOptionsUI(opts);
+    }
+
+    function syncGenOptionsUI(opts) {
+        document.querySelectorAll('.bulk-opt-cb, .modal-opt-cb').forEach(cb => {
+            const opt = cb.dataset.opt;
+            if (opt && opts[opt] !== undefined) {
+                cb.checked = !!opts[opt];
+                const pill = cb.closest('.gen-checkbox-pill');
+                if (pill) {
+                    if (cb.checked) pill.classList.add('is-checked');
+                    else pill.classList.remove('is-checked');
+                }
+            }
+        });
+
+        const selected = [];
+        if (opts.keywords) selected.push('Ключі');
+        if (opts.desc) selected.push('Опис');
+        if (opts.title) selected.push('Назва');
+        if (opts.attributes) selected.push('Характеристики');
+        
+        const tooltip = selected.length > 0 ? `Генерувати: ${selected.join(', ')}` : 'Не вибрано жодного поля для генерації';
+        const autoFillBtn = document.getElementById('auto-fill-all-btn');
+        if (autoFillBtn && !autoFillBtn.disabled) {
+            autoFillBtn.title = tooltip;
+            if (selected.length === 1 && opts.keywords) {
+                autoFillBtn.textContent = '🚀 Генерувати ключі';
+            } else if (selected.length === 1) {
+                autoFillBtn.textContent = `🚀 Генерувати ${selected[0].toLowerCase()}`;
+            } else if (selected.length > 1) {
+                autoFillBtn.textContent = `🚀 Автозаповнення (${selected.length})`;
+            } else {
+                autoFillBtn.textContent = '🚀 Автозаповнення';
+            }
+        }
+        
+        const runBulkBtn = document.getElementById('run-bulk-magic-btn');
+        if (runBulkBtn) {
+            runBulkBtn.title = tooltip;
+            if (selected.length === 1 && opts.keywords) {
+                runBulkBtn.textContent = '🚀 Запустити генерацію ключів';
+            } else {
+                runBulkBtn.textContent = '🚀 Запустити Bulk Магію';
+            }
+        }
+    }
+
+    // Слухаємо перемикання опцій генерації
+    document.addEventListener('change', (e) => {
+        if (e.target.matches('.bulk-opt-cb, .modal-opt-cb')) {
+            const opt = e.target.dataset.opt;
+            const current = getGenOptions();
+            current[opt] = e.target.checked;
+            saveGenOptions(current);
+        }
+    });
+
+    // Відкриття / закриття поповера налаштувань у модалці
+    const modalGenSettingsBtn = document.getElementById('modal-gen-settings-btn');
+    const modalGenPopover = document.getElementById('modal-gen-popover');
+    if (modalGenSettingsBtn && modalGenPopover) {
+        modalGenSettingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isOpen = modalGenPopover.style.display === 'block';
+            modalGenPopover.style.display = isOpen ? 'none' : 'block';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (modalGenPopover && !modalGenPopover.contains(e.target) && e.target !== modalGenSettingsBtn) {
+                modalGenPopover.style.display = 'none';
+            }
+        });
+    }
+
+    // Початкова синхронізація чекбоксів при завантаженні
+    syncGenOptionsUI(getGenOptions());
 
     
     // Черга для XLSX експорту
@@ -937,8 +1036,8 @@ async function openModal(summaryProduct) {
                 updateCounters();
                 setTimeout(window.triggerAutoResize, 10);
                 
-                // Автоматично запускаємо переклад на російську для текстових полів
-                if (['title', 'keywords', 'description'].includes(type)) {
+                // Автоматично запускаємо переклад на російську для текстових полів ТІЛЬКИ якщо переклад увімкнено
+                if (['title', 'keywords', 'description'].includes(type) && getGenOptions().translate) {
                     setTimeout(() => {
                         const translateBtn = document.querySelector(`.translate-btn[data-target="${type}"]`);
                         if (translateBtn && !translateBtn.disabled) {
@@ -948,7 +1047,11 @@ async function openModal(summaryProduct) {
                 }
 
             } catch (error) {
-                alert(error.message);
+                if (!window.isBulkRunning) {
+                    alert(error.message);
+                } else {
+                    console.warn(`Bulk generation error on ${type}:`, error.message);
+                }
             } finally {
                 e.target.textContent = originalText;
                 e.target.disabled = false;
@@ -1043,7 +1146,11 @@ async function openModal(summaryProduct) {
                 setTimeout(window.triggerAutoResize, 10);
 
             } catch (error) {
-                alert(error.message);
+                if (!window.isBulkRunning) {
+                    alert(error.message);
+                } else {
+                    console.warn(`Bulk translation error on ${type}:`, error.message);
+                }
             } finally {
                 e.target.innerHTML = originalText;
                 e.target.disabled = false;
@@ -1324,71 +1431,111 @@ async function openModal(summaryProduct) {
         });
     }
     
-    // Магічне автозаповнення
+    // Виконання послідовної генерації вибраних полів
+    async function executeAutoFill(options) {
+        const opts = options || getGenOptions();
+        
+        if (!opts.keywords && !opts.desc && !opts.title && !opts.attributes && !opts.sku) {
+            throw new Error('Не вибрано жодного поля для генерації! Будь ласка, оберіть хоча б одне поле (наприклад, 🔑 Ключі).');
+        }
+
+        const waitForBtn = (btn) => {
+            return new Promise(resolve => {
+                setTimeout(() => {
+                    if (!btn.disabled) return resolve();
+                    const interval = setInterval(() => {
+                        if (!btn.disabled) {
+                            clearInterval(interval);
+                            resolve();
+                        }
+                    }, 150);
+                }, 120);
+            });
+        };
+
+        // 1. Назва
+        if (opts.title) {
+            const titleBtn = document.querySelector('.gen-btn[data-type="title"]');
+            if (titleBtn) {
+                titleBtn.click();
+                await waitForBtn(titleBtn);
+                if (opts.translate) {
+                    await new Promise(r => setTimeout(r, 150));
+                    const titleTransBtn = document.querySelector('.translate-btn[data-target="title"]');
+                    if (titleTransBtn) await waitForBtn(titleTransBtn);
+                }
+            }
+        }
+
+        // 2. Опис
+        if (opts.desc) {
+            const descBtn = document.querySelector('.gen-btn[data-type="description"]');
+            if (descBtn) {
+                descBtn.click();
+                await waitForBtn(descBtn);
+                if (opts.translate) {
+                    await new Promise(r => setTimeout(r, 150));
+                    const descTransBtn = document.querySelector('.translate-btn[data-target="description"]');
+                    if (descTransBtn) await waitForBtn(descTransBtn);
+                }
+            }
+        }
+
+        // 3. Ключові слова
+        if (opts.keywords) {
+            const kwBtn = document.querySelector('.gen-btn[data-type="keywords"]');
+            if (kwBtn) {
+                kwBtn.click();
+                await waitForBtn(kwBtn);
+                if (opts.translate) {
+                    await new Promise(r => setTimeout(r, 150));
+                    const kwTransBtn = document.querySelector('.translate-btn[data-target="keywords"]');
+                    if (kwTransBtn) await waitForBtn(kwTransBtn);
+                }
+            }
+        }
+
+        // 4. Характеристики
+        if (opts.attributes) {
+            const attrBtn = document.querySelector('.gen-btn[data-type="attributes"]');
+            if (attrBtn) {
+                attrBtn.click();
+                await waitForBtn(attrBtn);
+            }
+        }
+
+        // 5. SKU
+        if (opts.sku) {
+            const skuInput = document.getElementById('edit-sku');
+            const randBtn = document.getElementById('rand-sku-btn');
+            if (skuInput && (!skuInput.value || skuInput.value.trim() === '') && randBtn) {
+                randBtn.click();
+            }
+        }
+    }
+
+    // Магічне автозаповнення в картці товару
     const autoFillBtn = document.getElementById('auto-fill-all-btn');
     if (autoFillBtn) {
         autoFillBtn.addEventListener('click', async (e) => {
             const mainBtn = e.target;
-            const originalText = mainBtn.innerHTML;
+            const originalText = mainBtn.textContent;
             mainBtn.disabled = true;
             mainBtn.textContent = '⏳ Заповнюю...';
             
             try {
-                // Helper to wait for a button to finish spinning
-                const waitForBtn = (btn) => {
-                    return new Promise(resolve => {
-                        if (!btn.disabled) return resolve();
-                        const interval = setInterval(() => {
-                            if (!btn.disabled) {
-                                clearInterval(interval);
-                                resolve();
-                            }
-                        }, 200);
-                    });
-                };
-
-                // 1. Опис та його переклад
-                const descBtn = document.querySelector('.gen-btn[data-type="description"]');
-                if (descBtn) {
-                    descBtn.click();
-                    await waitForBtn(descBtn);
-                    await new Promise(r => setTimeout(r, 100)); // Чекаємо на старт автоперекладу
-                    const descTransBtn = document.querySelector('.translate-btn[data-target="description"]');
-                    if (descTransBtn) await waitForBtn(descTransBtn);
-                }
-                
-                // 2. Ключові слова та їх переклад
-                const kwBtn = document.querySelector('.gen-btn[data-type="keywords"]');
-                if (kwBtn) {
-                    kwBtn.click();
-                    await waitForBtn(kwBtn);
-                    await new Promise(r => setTimeout(r, 100)); // Чекаємо на старт автоперекладу
-                    const kwTransBtn = document.querySelector('.translate-btn[data-target="keywords"]');
-                    if (kwTransBtn) await waitForBtn(kwTransBtn);
-                }
-                
-                // 3. Характеристики
-                const attrBtn = document.querySelector('.gen-btn[data-type="attributes"]');
-                if (attrBtn) {
-                    attrBtn.click();
-                    await waitForBtn(attrBtn);
-                }
-
-                // 4. Авто-рандомізація SKU, якщо він порожній
-                const skuInput = document.getElementById('edit-sku');
-                const randBtn = document.getElementById('rand-sku-btn');
-                if (skuInput && (!skuInput.value || skuInput.value.trim() === '') && randBtn) {
-                    randBtn.click();
-                }
+                const opts = getGenOptions();
+                await executeAutoFill(opts);
                 
                 mainBtn.textContent = '✅ Готово!';
                 setTimeout(() => {
-                    mainBtn.innerHTML = originalText;
+                    syncGenOptionsUI(getGenOptions());
                     mainBtn.disabled = false;
-                }, 2000);
+                }, 1500);
             } catch (err) {
                 console.error(err);
-                mainBtn.innerHTML = originalText;
+                alert(err.message);
+                syncGenOptionsUI(getGenOptions());
                 mainBtn.disabled = false;
             }
         });
@@ -1405,81 +1552,91 @@ async function openModal(summaryProduct) {
             const ids = Array.from(selectedProductIds);
             if (ids.length === 0) return;
             
-            // PRE-FLIGHT CHECK: Verify all categories exist
-            const missingCategories = new Set();
-            const missingCategoryNames = new Set();
-            ids.forEach(id => {
-                const p = currentProducts.find(prod => String(prod.id) === String(id));
-                if (p && p.category_id && p.category_id !== '0' && p.category_id !== 0) {
-                    if (!promAttributesDb[p.category_id]) {
-                        missingCategories.add(p.category_id);
-                        missingCategoryNames.add(p.category?.name || p.category_id);
+            const opts = getGenOptions();
+            if (!opts.keywords && !opts.desc && !opts.title && !opts.attributes && !opts.sku) {
+                alert('Помилка! Не вибрано жодного поля для генерації. Будь ласка, оберіть хоча б одне поле (наприклад, 🔑 Ключі).');
+                return;
+            }
+
+            // Перевірка категорій потрібна ТІЛЬКИ якщо генеруються характеристики!
+            if (opts.attributes) {
+                const missingCategories = new Set();
+                const missingCategoryNames = new Set();
+                ids.forEach(id => {
+                    const p = currentProducts.find(prod => String(prod.id) === String(id));
+                    if (p && p.category_id && p.category_id !== '0' && p.category_id !== 0) {
+                        if (!promAttributesDb[p.category_id]) {
+                            missingCategories.add(p.category_id);
+                            missingCategoryNames.add(p.category?.name || p.category_id);
+                        }
                     }
+                });
+                
+                if (missingCategories.size > 0) {
+                    alert(`Помилка! Відсутні довідники характеристик для таких категорій:\n\n${Array.from(missingCategoryNames).join('\n')}\n\nНеможливо згенерувати характеристики. Будь ласка, зніміть галочку "⚙️ Характеристики" або спочатку завантажте довідники для цих категорій.`);
+                    return;
                 }
-            });
+            }
             
-            if (missingCategories.size > 0) {
-                alert(`Помилка! Відсутні довідники характеристик для таких категорій:\n\n${Array.from(missingCategoryNames).join('\n')}\n\nНеможливо запустити масове заповнення. Спочатку завантажте довідники для цих категорій (відкрийте один товар і вставте посилання з Prom).`);
+            const fieldsList = [];
+            if (opts.keywords) fieldsList.push('SEO ключі');
+            if (opts.desc) fieldsList.push('опис');
+            if (opts.title) fieldsList.push('назву');
+            if (opts.attributes) fieldsList.push('характеристики');
+            if (opts.translate) fieldsList.push('RU переклад');
+            if (opts.sku) fieldsList.push('випадковий SKU');
+
+            if (!confirm(`Ви впевнені, що хочете автоматично згенерувати [${fieldsList.join(', ')}] для ${ids.length} товарів? Процес може зайняти декілька хвилин. Сторінку не закривати.`)) {
                 return;
             }
             
-            if (!confirm(`Ви впевнені, що хочете автоматично згенерувати контент для ${ids.length} товарів? Процес може зайняти декілька хвилин. Сторінку не закривати.`)) {
-                return;
-            }
-            
+            window.isBulkRunning = true;
             bulkOverlay.style.display = 'flex';
             
-            for (let i = 0; i < ids.length; i++) {
-                const id = ids[i];
-                const product = currentProducts.find(p => String(p.id) === id);
-                if (!product) continue;
-                
-                bulkProgressText.textContent = `Обробка товару ${i + 1} з ${ids.length} (${product.name})`;
-                bulkProgressFill.style.width = `${((i) / ids.length) * 100}%`;
-                
-                try {
-                    // 1. Відкриваємо модалку
-                    await openModal(product);
-                    await new Promise(r => setTimeout(r, 800)); // Чекаємо рендер та ініт
+            try {
+                for (let i = 0; i < ids.length; i++) {
+                    const id = ids[i];
+                    const product = currentProducts.find(p => String(p.id) === id);
+                    if (!product) continue;
                     
-                    // 2. Тиснемо магічну кнопку
-                    const autoFill = document.getElementById('auto-fill-all-btn');
-                    if (autoFill) {
-                        autoFill.click();
-                        // Чекаємо поки магія закінчиться (кнопка стане активною)
-                        await new Promise(resolve => {
-                            const interval = setInterval(() => {
-                                if (!autoFill.disabled) {
-                                    clearInterval(interval);
-                                    resolve();
-                                }
-                            }, 500);
-                        });
-                        await new Promise(r => setTimeout(r, 1000)); // Даємо секунду перепочити перед збереженням
+                    bulkProgressText.textContent = `Обробка товару ${i + 1} з ${ids.length} (${product.name || 'Товар #' + id})`;
+                    bulkProgressFill.style.width = `${((i) / ids.length) * 100}%`;
+                    
+                    try {
+                        // 1. Відкриваємо модалку
+                        await openModal(product);
+                        await new Promise(r => setTimeout(r, 600)); // Чекаємо рендер та ініт
+                        
+                        // 2. Виконуємо вибрану автогенерацію
+                        await executeAutoFill(opts);
+                        await new Promise(r => setTimeout(r, 500)); // Пауза перед збереженням
+                        
+                        // 3. Зберігаємо в XLSX чергу
+                        const saveBtn = document.getElementById('save-btn');
+                        if (saveBtn) {
+                            saveBtn.click();
+                            await new Promise(r => setTimeout(r, 600)); // Чекаємо збереження
+                        }
+                        
+                        // 4. Закриваємо модалку
+                        const closeBtn = document.querySelector('.close-modal');
+                        if (closeBtn) closeBtn.click();
+                        await new Promise(r => setTimeout(r, 400));
+                        
+                    } catch (err) {
+                        console.error('Помилка Bulk Magic на товарі', id, err);
                     }
-                    
-                    // 3. Зберігаємо в XLSX чергу
-                    const saveBtn = document.getElementById('save-btn');
-                    if (saveBtn) {
-                        saveBtn.click();
-                        await new Promise(r => setTimeout(r, 800)); // Чекаємо збереження
-                    }
-                    
-                    // 4. Закриваємо модалку
-                    const closeBtn = document.querySelector('.close-modal');
-                    if (closeBtn) closeBtn.click();
-                    await new Promise(r => setTimeout(r, 800)); // Анімація закриття та відмальовка
-                    
-                } catch (err) {
-                    console.error('Помилка Bulk Magic на товарі', id, err);
                 }
+                
+                bulkProgressFill.style.width = `100%`;
+                bulkProgressText.textContent = `Готово! Оброблено ${ids.length} товарів.`;
+                
+                await new Promise(r => setTimeout(r, 1500));
+            } finally {
+                window.isBulkRunning = false;
+                bulkOverlay.style.display = 'none';
             }
-            
-            bulkProgressFill.style.width = `100%`;
-            bulkProgressText.textContent = `Готово! Оброблено ${ids.length} товарів.`;
-            
-            await new Promise(r => setTimeout(r, 2000));
-            bulkOverlay.style.display = 'none';
+
             selectedProductIds.clear();
             renderProducts(currentProducts);
             alert(`Масову обробку завершено! ${ids.length} товарів успішно згенеровано і додано в чергу.`);
