@@ -80,7 +80,7 @@ class AnthropicService {
      * Виклик Google Gemini API (REST)
      */
     async callGemini(apiKey, prompt, maxTokens = 1200) {
-        const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+        const models = ['gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-1.5-flash'];
         let lastError = null;
 
         for (const model of models) {
@@ -116,10 +116,18 @@ class AnthropicService {
     /**
      * Виклик Anthropic Claude API
      */
-    async callClaude(apiKey, prompt, maxTokens = 1200, preferredModel = 'claude-3-5-haiku-20241022') {
+    async callClaude(apiKey, prompt, maxTokens = 1200, preferredModel = 'claude-haiku-5-5') {
         const client = this.getClient(apiKey);
-        const models = [preferredModel, 'claude-3-5-haiku-20241022', 'claude-3-haiku-20240307'];
-        const uniqueModels = [...new Set(models)];
+        const models = [
+            preferredModel,
+            'claude-haiku-5-5',
+            'claude-sonnet-5-5',
+            'claude-haiku-4-5-20251001',
+            'claude-sonnet-4-5-20250929',
+            'claude-3-5-haiku-latest',
+            'claude-3-5-sonnet-latest'
+        ];
+        const uniqueModels = [...new Set(models.filter(Boolean))];
         
         let lastError = null;
         for (const model of uniqueModels) {
@@ -147,7 +155,7 @@ class AnthropicService {
     /**
      * Універсальний виклик ШІ (автоматично визначає Gemini або Claude за форматом ключа)
      */
-    async callAi(apiKey, prompt, maxTokens = 1200, preferredClaudeModel = 'claude-3-5-haiku-20241022') {
+    async callAi(apiKey, prompt, maxTokens = 1200, preferredClaudeModel = 'claude-haiku-5-5') {
         if (!apiKey) throw new Error('API ключ ШІ не надано. Введіть ваш ключ у формі підключення.');
         const trimmedKey = apiKey.trim();
 
@@ -188,7 +196,7 @@ class AnthropicService {
 У відповіді поверни ТІЛЬКИ текст назви, без лапок чи пояснень.`;
 
         try {
-            const result = await this.callAi(apiKey, prompt, 150, 'claude-3-5-haiku-20241022');
+            const result = await this.callAi(apiKey, prompt, 150, 'claude-haiku-5-5');
             return result.replace(/^"|"$/g, '').trim();
         } catch (error) {
             console.error('AI generateTitle error:', error);
@@ -227,7 +235,7 @@ class AnthropicService {
 Поверни ТІЛЬКИ рядок з ключовими словами через кому, без пояснень і лапок.`;
 
         try {
-            const result = await this.callAi(apiKey, prompt, 600, 'claude-3-5-haiku-20241022');
+            const result = await this.callAi(apiKey, prompt, 600, 'claude-haiku-5-5');
             return result.replace(/^"|"$/g, '').trim();
         } catch (error) {
             console.error('AI generateKeywords error:', error);
@@ -266,7 +274,7 @@ class AnthropicService {
 Напиши опис ВИКЛЮЧНО українською мовою. Поверни ТІЛЬКИ HTML-код опису без додаткових пояснень.`;
 
         try {
-            let html = await this.callAi(apiKey, prompt, 2000, 'claude-3-5-sonnet-20241022');
+            let html = await this.callAi(apiKey, prompt, 2000, 'claude-sonnet-5-5');
             
             // Очищення від маркдауну
             if (html.startsWith('```html')) {
@@ -357,7 +365,7 @@ ${schemaText}`;
         }
 
         try {
-            let resultText = await this.callAi(apiKey, prompt, 1200, 'claude-3-5-haiku-20241022');
+            let resultText = await this.callAi(apiKey, prompt, 1200, 'claude-haiku-5-5');
             
             // Очищення від markdown якщо раптом є
             if (resultText.startsWith('```json')) {
@@ -412,7 +420,7 @@ ${schemaText}`;
         if (apiKey) {
             try {
                 const prompt = `Переклади наступний текст з української на російську мову. Збережи всі HTML-теги, структуру та форматування. Поверни ТІЛЬКИ перекладений текст без додаткових коментарів чи лапок:\n\n${text}`;
-                return await this.callAi(apiKey, prompt, 2000, 'claude-3-5-haiku-20241022');
+                return await this.callAi(apiKey, prompt, 2000, 'claude-haiku-5-5');
             } catch (aiError) {
                 console.error('AI translate fallback error:', aiError.message);
             }
