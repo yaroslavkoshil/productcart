@@ -1,8 +1,23 @@
 const { Anthropic } = require('@anthropic-ai/sdk');
 const axios = require('axios');
 
-function formatAnthropicError(error) {
+function formatAiError(error) {
     let msg = '';
+    
+    // Помилка Google Gemini
+    if (error.response && error.response.data && error.response.data.error) {
+        const geminiErr = error.response.data.error;
+        const rawMsg = geminiErr.message || JSON.stringify(geminiErr);
+        if (rawMsg.includes('API key not valid') || rawMsg.includes('API_KEY_INVALID')) {
+            return 'Недійсний Google Gemini API ключ. Перевірте ключ у формі підключення';
+        }
+        if (rawMsg.includes('RESOURCE_EXHAUSTED') || rawMsg.includes('quota') || error.response.status === 429) {
+            return 'Перевищено ліміт безкоштовних запитів Google Gemini (Rate limit). Зачекайте 1 хвилину';
+        }
+        return `Помилка Google Gemini: ${rawMsg}`;
+    }
+
+    // Помилка Anthropic Claude
     if (error.error && error.error.message) {
         msg = error.error.message;
     } else if (typeof error.message === 'string') {
@@ -15,11 +30,11 @@ function formatAnthropicError(error) {
         }
         if (!msg) msg = error.message;
     } else {
-        msg = 'Невідома помилка Anthropic';
+        msg = 'Невідома помилка ШІ';
     }
 
     if (msg.includes('credit balance is too low') || msg.includes('credit_balance_too_low')) {
-        return 'На рахунку Anthropic закінчилися кошти (нульовий баланс). Поповніть баланс на console.anthropic.com';
+        return 'На рахунку Anthropic закінчилися кошти (нульовий баланс). Поповніть баланс або використайте безкоштовний ключ Gemini';
     }
     if (msg.includes('API key is invalid') || msg.includes('authentication_error')) {
         return 'Недійсний API ключ Anthropic. Перевірте ключ у формі підключення';
@@ -32,9 +47,9 @@ function formatAnthropicError(error) {
 
 class AnthropicService {
     /**
-     * Повторює операцію при помилках мережі чи лімітах
+     * Повторює операцію при тимчасових помилках мережі чи лімітах
      */
-    async withRetry(operation, maxRetries = 3, delayMs = 2000) {
+    async withRetry(operation, maxRetries = 3, delayMs = 1500) {
         let lastError;
         for (let i = 0; i < maxRetries; i++) {
             try {
@@ -42,34 +57,111 @@ class AnthropicService {
             } catch (error) {
                 lastError = error;
                 const msg = (error.message || '').toLowerCase();
-                // Не повторюємо для критичних помилок (баланс, ключ, поганий запит)
-                if (msg.includes('credit balance') || msg.includes('api key') || msg.includes('invalid_request_error') || msg.includes('authentication_error')) {
+                // Не повторюємо для критичних помилок (невірний ключ, баланс, поганий запит)
+                if (msg.includes('credit balance') || msg.includes('api key') || msg.includes('authentication_error') || msg.includes('api_key_invalid')) {
                     throw error;
                 }
-                console.warn(`[Anthropic] Спроба ${i + 1} невдала, повтор через ${delayMs}мс... Помилка: ${error.message}`);
+                console.warn(`[AI Service] Спроба ${i + 1} невдала, повтор через ${delayMs}мс... Помилка: ${error.message}`);
                 await new Promise(res => setTimeout(res, delayMs));
-                delayMs *= 1.5; // Збільшуємо затримку
+                delayMs *= 1.5;
+            }
+        }
+        throw lastError;
+    }
+
+    getClient(apiKey) {
+        if (!apiKey) throw new Error('API ключ ШІ не надано');
+        return new Anthropic({
+            apiKey: apiKey.trim(),
+        });
+    }
+
+    /**
+     * Виклик Google Gemini API (REST)
+     */
+    async callGemini(apiKey, prompt, maxTokens = 1200) {
+        const models = ['gemini-2.0-flash', 'gemini-1.5-flash'];
+        let lastError = null;
+
+        for (const model of models) {
+            try {
+                const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+                const response = await this.withRetry(async () => {
+                    return await axios.post(url, {
+                        contents: [{ parts: [{ text: prompt }] }],
+                        generationConfig: {
+                            maxOutputTokens: maxTokens,
+                            temperature: 0.3
+                        }
+                    }, {
+                        headers: { 'Content-Type': 'application/json' },
+                        timeout: 30000
+                    });
+                }, 2, 2000);
+
+                const text = response.data?.candidates?.[0]?.content?.parts?.[0]?.text;
+                if (text) return text.trim();
+            } catch (err) {
+                lastError = err;
+                const errMsg = err.response?.data?.error?.message || err.message || '';
+                if (errMsg.includes('API key not valid') || errMsg.includes('API_KEY_INVALID')) {
+                    throw err;
+                }
+                console.warn(`[Gemini] Помилка на моделі ${model}: ${errMsg}, пробуємо резервну...`);
+            }
+        }
+        throw lastError || new Error('Google Gemini API не повернуло відповіді');
+    }
+
+    /**
+     * Виклик Anthropic Claude API
+     */
+    async callClaude(apiKey, prompt, maxTokens = 1200, preferredModel = 'claude-3-5-haiku-20241022') {
+        const client = this.getClient(apiKey);
+        const models = [preferredModel, 'claude-3-5-haiku-20241022', 'claude-3-haiku-20240307'];
+        const uniqueModels = [...new Set(models)];
+        
+        let lastError = null;
+        for (const model of uniqueModels) {
+            try {
+                const msg = await this.withRetry(async () => {
+                    return await client.messages.create({
+                        model: model,
+                        max_tokens: maxTokens,
+                        messages: [{ role: "user", content: prompt }]
+                    });
+                }, 2, 2000);
+                return msg.content[0].text.trim();
+            } catch (err) {
+                lastError = err;
+                const msg = (err.message || '').toLowerCase();
+                if (msg.includes('credit balance') || msg.includes('api key') || msg.includes('authentication_error')) {
+                    throw err;
+                }
+                console.warn(`[Claude] Модель ${model} повернула помилку: ${err.message}, пробуємо іншу...`);
             }
         }
         throw lastError;
     }
 
     /**
-     * Ініціалізує клієнт Anthropic з переданим ключем
+     * Універсальний виклик ШІ (автоматично визначає Gemini або Claude за форматом ключа)
      */
-    getClient(apiKey) {
-        if (!apiKey) throw new Error('Anthropic API Key is required');
-        return new Anthropic({
-            apiKey: apiKey,
-        });
+    async callAi(apiKey, prompt, maxTokens = 1200, preferredClaudeModel = 'claude-3-5-haiku-20241022') {
+        if (!apiKey) throw new Error('API ключ ШІ не надано. Введіть ваш ключ у формі підключення.');
+        const trimmedKey = apiKey.trim();
+
+        if (trimmedKey.startsWith('AIza') || trimmedKey.length === 39) {
+            return await this.callGemini(trimmedKey, prompt, maxTokens);
+        } else {
+            return await this.callClaude(trimmedKey, prompt, maxTokens, preferredClaudeModel);
+        }
     }
 
     /**
      * Генерує оптимізовану назву товару (до 110 символів)
      */
     async generateTitle(apiKey, productContext) {
-        const client = this.getClient(apiKey);
-        
         const name = (productContext && productContext.name) ? productContext.name : '';
         let desc = 'Немає';
         if (productContext && productContext.description) {
@@ -96,17 +188,11 @@ class AnthropicService {
 У відповіді поверни ТІЛЬКИ текст назви, без лапок чи пояснень.`;
 
         try {
-            const msg = await this.withRetry(async () => {
-                return await client.messages.create({
-                    model: "claude-haiku-4-5-20251001",
-                    max_tokens: 150,
-                    messages: [{ role: "user", content: prompt }]
-                });
-            });
-            return msg.content[0].text.trim().replace(/^"|"$/g, '');
+            const result = await this.callAi(apiKey, prompt, 150, 'claude-3-5-haiku-20241022');
+            return result.replace(/^"|"$/g, '').trim();
         } catch (error) {
-            console.error('Anthropic generateTitle error:', error);
-            throw new Error(`Помилка ШІ: ${formatAnthropicError(error)}`);
+            console.error('AI generateTitle error:', error);
+            throw new Error(`Помилка ШІ: ${formatAiError(error)}`);
         }
     }
 
@@ -114,7 +200,6 @@ class AnthropicService {
      * Генерує пошукові ключові слова (до 1024 символів, через кому)
      */
     async generateKeywords(apiKey, productContext) {
-        const client = this.getClient(apiKey);
         const name = (productContext && productContext.name) ? productContext.name : '';
         
         let desc = 'Немає';
@@ -131,22 +216,10 @@ class AnthropicService {
 1. Ключові слова мають бути розділені комою.
 2. Пиши реальні фрази, які люди вводять у пошук (від 2 до 5 слів у фразі).
 3. Комбінуй тип товару з брендом, об'ємом, дією, складом, типом волосся/шкіри, цільовою аудиторією (напр. "для салону", "оптом").
-4. СУВОРИЙ ЛІМІТ ДОВЖИНИ: Загальна довжина тексту має бути СУВОРО від 900 до 1020 символів. Це критично важливо! Якщо не вистачає конкретних ідей з опису, додавай широкі загальні пошукові запити з цієї ніші для максимального охоплення аудиторії (наприклад, "професійна косметика для волосся", "догляд за волоссям вдома" тощо), поки не досягнеш обсягу мінімум 900 символів.
+4. СУВОРИЙ ЛІМІТ ДОВЖИНИ: Загальна довжина тексту має бути СУВОРО від 900 до 1020 символів. Це критично важливо! Якщо не вистачає конкретних ідей з опису, додавай широкі загальні пошукові запити з цієї ніші для максимального охоплення аудиторії, поки не досягнеш обсягу мінімум 900 символів.
 5. МОВА: СУВОРО 100% УКРАЇНСЬКА! Категорично заборонено використовувати російські слова. Бренд або англійські назви можна залишити англійською.
 6. Не вигадуй характеристики, яких немає в описі (якщо не вказано "1000 мл", не пиши це). Але якщо вони є в описі, обов'язково використовуй їх у ключах.
 
-Ось ідеальні приклади того, що я очікую:
-
-Приклад 1: (Бальзам-кондиціонер You Look 5 літрів)
-Ключі: бальзам для волосся, кондиціонер для волосся, бальзам кондиціонер для волосся, кондиціонер для волосся 5л, бальзам для волосся 5 літрів, бальзам для волосся professional, бальзам для фарбованого волосся, кондиціонер для фарбованого волосся, бальзам для волосся для салону, кондиціонер для волосся для перукарні, бальзам для волосся оптом, бальзам для волосся веганський, бальзам для волосся без силікону, бальзам для волосся з ментолом, бальзам для волосся захист кольору, You Look Conditioner, You Look кондиціонер
-
-Приклад 2: (Маска Subrina Professional Salon Mask)
-Ключі: маска для всіх типів волосся, маска для ламкого волосся, Subrina Professional Salon Mask, маска салонна для волосся, маска з екстрактом кипариса, маска з екстрактом сосни, засіб для зміцнення волосся, маска для гладкості волосся, маска для легкого розчісування, маска відновлююча для волосся, догляд салонний за волоссям, маска професійна для перукарень, маска Subrina для волосся
-
-Приклад 3: (Гель для душу Alcantara B.C. Orange Bath Gel 750мл)
-Ключі: апельсиновий гель для душу, гель для душу 750 мл, Alcantara BC Orange Bath Gel, гель з провітаміном В5, професійний гель для душу, гель для душу alcantara, великий об'єм гель для душу, зволожуючий гель для душу, універсальний гель тіло волосся, сімейний гель для душу, професійна косметика alcantara, салонний гель для душу, гель для душу апельсин
-
-Тепер твоя черга.
 Товар: ${name}
 Опис: ${desc}
 
@@ -154,17 +227,11 @@ class AnthropicService {
 Поверни ТІЛЬКИ рядок з ключовими словами через кому, без пояснень і лапок.`;
 
         try {
-            const msg = await this.withRetry(async () => {
-                return await client.messages.create({
-                    model: "claude-sonnet-4-5-20250929", // Використовуємо sonnet для кращої якості і дотримання мови
-                    max_tokens: 500,
-                    messages: [{ role: "user", content: prompt }]
-                });
-            });
-            return msg.content[0].text.trim();
+            const result = await this.callAi(apiKey, prompt, 600, 'claude-3-5-haiku-20241022');
+            return result.replace(/^"|"$/g, '').trim();
         } catch (error) {
-            console.error('Anthropic generateKeywords error:', error);
-            throw new Error(`Помилка ШІ: ${formatAnthropicError(error)}`);
+            console.error('AI generateKeywords error:', error);
+            throw new Error(`Помилка ШІ: ${formatAiError(error)}`);
         }
     }
 
@@ -172,7 +239,6 @@ class AnthropicService {
      * Генерує повноцінний HTML опис товару
      */
     async generateDescription(apiKey, productContext) {
-        const client = this.getClient(apiKey);
         const name = (productContext && productContext.name) ? productContext.name : '';
         const price = (productContext && productContext.price) ? productContext.price : '';
         const currency = (productContext && productContext.currency) ? productContext.currency : 'UAH';
@@ -188,8 +254,8 @@ class AnthropicService {
         const prompt = `Ти професійний копірайтер для e-commerce. Напиши продаючий опис для товару.
 Вимоги:
 1. Формат: HTML (використовуй <h3>, <ul>, <li>, <strong>, <p>). Не використовуй теги <html> чи <body>.
-2. Опис має бути релевантним товару, нічого самому не придумувати, тільки те що пишуть в інтернеті про цей товар інші магазини.
-3. Опис має бути розширеним і продаючим.
+2. Опис має бути релевантним товару, нічого самому не вигадувати, підкреслити користь, склад, спосіб застосування, переваги.
+3. Опис має бути розширеним і структурованим.
 4. МОВА: ВИКЛЮЧНО УКРАЇНСЬКА! Жодного російського слова в тексті опису!
 
 Поточна інформація:
@@ -200,15 +266,8 @@ class AnthropicService {
 Напиши опис ВИКЛЮЧНО українською мовою. Поверни ТІЛЬКИ HTML-код опису без додаткових пояснень.`;
 
         try {
-            const msg = await this.withRetry(async () => {
-                return await client.messages.create({
-                    model: "claude-sonnet-4-5-20250929",
-                    max_tokens: 1500,
-                    messages: [{ role: "user", content: prompt }]
-                });
-            });
+            let html = await this.callAi(apiKey, prompt, 2000, 'claude-3-5-sonnet-20241022');
             
-            let html = msg.content[0].text.trim();
             // Очищення від маркдауну
             if (html.startsWith('```html')) {
                 html = html.replace(/^```html/, '').replace(/```$/, '');
@@ -217,17 +276,15 @@ class AnthropicService {
             }
             return html.trim();
         } catch (error) {
-            console.error('Anthropic generateDescription error:', error);
-            throw new Error(`Помилка ШІ: ${formatAnthropicError(error)}`);
+            console.error('AI generateDescription error:', error);
+            throw new Error(`Помилка ШІ: ${formatAiError(error)}`);
         }
     }
 
     /**
-     * Генерує атрибути (характеристики) на основі опису та схеми
+     * Генерує атрибути (характеристики) на основі опису та схеми (або витягує їх динамічно)
      */
     async generateAttributes(apiKey, productContext, schema) {
-        const client = this.getClient(apiKey);
-        
         const name = (productContext && productContext.name) ? productContext.name : '';
         let desc = 'Немає';
         if (productContext && productContext.description) {
@@ -238,9 +295,12 @@ class AnthropicService {
             }
         }
         
-        // Формуємо текст схеми для ШІ
-        let schemaText = '';
-        if (schema && schema.attributes) {
+        let prompt = '';
+        const hasSchema = schema && Array.isArray(schema.attributes) && schema.attributes.length > 0;
+
+        if (hasSchema) {
+            // Формуємо текст схеми з бази Прому
+            let schemaText = '';
             schema.attributes.forEach(attr => {
                 schemaText += `- ID: ${attr.id}, Назва: "${attr.name}", Тип: ${attr.type}\n`;
                 if (attr.values && attr.values.length > 0) {
@@ -249,16 +309,15 @@ class AnthropicService {
                     schemaText += `  Дозволені значення: Будь-яке власне значення (знайди в тексті)\n`;
                 }
             });
-        }
 
-        const prompt = `Ти — експерт з маркетплейсу Prom.ua. Твоя задача — заповнити характеристики товару на основі його назви та опису.
-Вимоги та ОБМЕЖЕННЯ (КРИТИЧНО ВАЖЛИВО):
-1. Якщо характеристика має конкретний список "Дозволені значення", ти маєш право вибирати значення ТІЛЬКИ з цього списку.
-2. Якщо "Дозволені значення: Будь-яке власне значення", ти можеш вписати точне число або слово з назви/опису (наприклад, для "Об'єм" - "1000", для "Вага" - "5"). Не додавай одиниці виміру до значення (просто "1000", а не "1000 мл").
-3. Ти можеш логічно додумувати характеристики (наприклад, якщо шампунь з ментолом, він "Освіжаючий").
-4. Якщо ти зовсім не впевнений — краще пропусти характеристику (не додавай цей ID).
-5. Для типу "multiselect" ти можеш повернути масив з кількох дозволених значень (наприклад ["Зволоження", "Відновлення"]). Для інших типів — тільки один рядок/число.
-6. Поверни результат ВИКЛЮЧНО у форматі валідного JSON об'єкта, де ключі — це ID характеристики (як рядки), а значення — це вибране значення (рядок) або масив значень. БЕЗ markdown-розмітки, БЕЗ пояснень.
+            prompt = `Ти — експерт з маркетплейсу Prom.ua. Твоя задача — заповнити характеристики товару на основі його назви та опису.
+Вимоги та ОБМЕЖЕННЯ:
+1. Якщо характеристика має конкретний список "Дозволені значення", вибирай значення ТІЛЬКИ з цього списку.
+2. Якщо "Дозволені значення: Будь-яке власне значення", впиши точне число або слово з назви/опису (наприклад "1000", а не "1000 мл").
+3. Логічно додумуй очевидні характеристики (наприклад шампунь з ментолом — дія "Освіжаюча").
+4. Якщо зовсім не впевнений — пропусти характеристику (не додавай цей ID).
+5. Для типу "multiselect" поверни масив з кількох дозволених значень (наприклад ["Зволоження", "Відновлення"]). Для інших — рядок/число.
+6. Поверни результат ВИКЛЮЧНО у форматі валідного JSON об'єкта, де ключі — це ID характеристики (як рядки), а значення — це вибране значення або масив. БЕЗ markdown, БЕЗ пояснень.
 
 Приклад вихідного JSON:
 {
@@ -272,17 +331,34 @@ class AnthropicService {
 
 Доступні характеристики для заповнення:
 ${schemaText}`;
+        } else {
+            // Без попередньої схеми: AI визначає ключові характеристики за назвою та описом
+            prompt = `Ти — експерт з товарів та характеристик для Prom.ua. Твоя задача — витягнути та сформувати ключові характеристики товару на основі його назви та опису.
+Визнач всі важливі характеристики (наприклад: Виробник/Бренд, Країна виробник, Колір, Матеріал, Об'єм, Вага, Тип, Призначення, Стать, Клас косметики тощо).
+
+Вимоги:
+1. Ключі JSON — це назви характеристик українською мовою (наприклад: "Виробник", "Країна виробник", "Колір", "Матеріал", "Об'єм", "Тип", "Призначення").
+2. Значення — це коротке точне значення (рядок).
+3. Якщо інформація є в назві чи описі — обов'язково додай її.
+4. Поверни ВИКЛЮЧНО валідний JSON об'єкт, БЕЗ markdown-форматування, БЕЗ пояснень.
+
+Приклад вихідного JSON:
+{
+  "Виробник": "Subrina Professional",
+  "Країна виробник": "Словенія",
+  "Тип": "Кондиціонер",
+  "Призначення": "Відновлення, Зволоження",
+  "Об'єм": "1000 мл"
+}
+
+Дані про товар:
+Назва: ${name}
+Опис: ${desc}`;
+        }
 
         try {
-            const msg = await this.withRetry(async () => {
-                return await client.messages.create({
-                    model: "claude-sonnet-4-5-20250929", // Використовуємо sonnet для кращого аналізу
-                    max_tokens: 1000,
-                    messages: [{ role: "user", content: prompt }]
-                });
-            });
+            let resultText = await this.callAi(apiKey, prompt, 1200, 'claude-3-5-haiku-20241022');
             
-            let resultText = msg.content[0].text.trim();
             // Очищення від markdown якщо раптом є
             if (resultText.startsWith('```json')) {
                 resultText = resultText.replace(/^```json/, '').replace(/```$/, '');
@@ -290,10 +366,16 @@ ${schemaText}`;
                 resultText = resultText.replace(/^```/, '').replace(/```$/, '');
             }
             
+            const firstBrace = resultText.indexOf('{');
+            const lastBrace = resultText.lastIndexOf('}');
+            if (firstBrace !== -1 && lastBrace !== -1) {
+                resultText = resultText.substring(firstBrace, lastBrace + 1);
+            }
+            
             return JSON.parse(resultText.trim());
         } catch (error) {
-            console.error('Anthropic generateAttributes error:', error);
-            throw new Error(`Помилка ШІ (генерація атрибутів): ${formatAnthropicError(error)}`);
+            console.error('AI generateAttributes error:', error);
+            throw new Error(`Помилка ШІ (генерація атрибутів): ${formatAiError(error)}`);
         }
     }
 
@@ -301,7 +383,7 @@ ${schemaText}`;
      * Перекладає текст на російську мову
      */
     async translateText(apiKey, text, type) {
-        // 1. Пробуємо безкоштовний Google Translate API через POST (надійно, без ліміту довжини URL)
+        // 1. Пробуємо безкоштовний Google Translate API через POST
         try {
             const postData = new URLSearchParams({ q: text });
             const response = await axios.post(
@@ -326,19 +408,13 @@ ${schemaText}`;
             console.warn('Google Translate API error:', googleError.message);
         }
 
-        // 2. Резервний варіант через Anthropic Claude (якщо Google заблоковано і є API ключ)
+        // 2. Резервний варіант через AI
         if (apiKey) {
             try {
-                const client = this.getClient(apiKey);
                 const prompt = `Переклади наступний текст з української на російську мову. Збережи всі HTML-теги, структуру та форматування. Поверни ТІЛЬКИ перекладений текст без додаткових коментарів чи лапок:\n\n${text}`;
-                const msg = await client.messages.create({
-                    model: "claude-haiku-4-5-20251001",
-                    max_tokens: 2000,
-                    messages: [{ role: "user", content: prompt }]
-                });
-                return msg.content[0].text.trim();
-            } catch (claudeError) {
-                console.error('Anthropic translate fallback error:', claudeError.message);
+                return await this.callAi(apiKey, prompt, 2000, 'claude-3-5-haiku-20241022');
+            } catch (aiError) {
+                console.error('AI translate fallback error:', aiError.message);
             }
         }
 

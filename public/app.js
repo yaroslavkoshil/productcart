@@ -846,9 +846,12 @@ async function openModal(summaryProduct) {
         const attrContainer = document.getElementById('attributes-container');
         attrContainer.innerHTML = '';
         
-        const attributes = product.attributes || product.parameters || [];
+        const attributes = product.attributes || product.parameters || product.params || [];
         const existingAttrsMap = {};
-        attributes.forEach(a => { existingAttrsMap[a.id || a.name] = a; });
+        attributes.forEach(a => {
+            const rawVal = a.value !== undefined ? a.value : (Array.isArray(a.values) ? a.values.map(v => v.name || v).join(', ') : '');
+            existingAttrsMap[a.id || a.name] = { ...a, value: rawVal };
+        });
         
         // Перевіряємо чи є категорія в нашій локальній базі
         const categoryId = product.category ? product.category.id : null;
@@ -860,7 +863,7 @@ async function openModal(summaryProduct) {
         debugDiv.style = "margin-bottom: 10px; padding: 8px; font-size: 0.9em; background: #f8f9fa; border: 1px solid #ddd; border-radius: 4px;";
         
         if (catSchema) {
-            debugDiv.innerHTML = `✅ Категорія порталу: <b>${categoryName} (ID: ${categoryId})</b>. Довідник знайдено!`;
+            debugDiv.innerHTML = `✅ Категорія порталу: <b>${categoryName} (ID: ${categoryId})</b>. Довідник Prom підключено.`;
             debugDiv.style.borderColor = "#b7eb8f";
             debugDiv.style.background = "#f6ffed";
             
@@ -878,16 +881,15 @@ async function openModal(summaryProduct) {
                 }
             });
         } else {
-            debugDiv.innerHTML = `⚠️ Категорія порталу: <b>${categoryName} (ID: ${categoryId || 'Немає'})</b>. <br>
-                Довідник для неї ще не завантажено!<br>
-                Вставте XML-посилання на характеристики цієї категорії (можна взяти в кабінеті Prom.ua):<br>
+            debugDiv.innerHTML = `ℹ️ Категорія порталу: <b>${categoryName} (ID: ${categoryId || 'Немає'})</b>. ШІ підбере характеристики за описом товару.<br>
+                <small style="color: var(--text-muted);">За бажанням, можна імпортувати офіційний XML-довідник Prom для цієї категорії:</small>
                 <div style="display: flex; gap: 8px; margin-top: 5px;">
                     <input type="text" id="cat-xml-input" class="input" placeholder="https://my.prom.ua/cabinet/export_categories/..." style="flex: 1; padding: 4px;">
                     <button id="cat-xml-btn" class="btn secondary small">Завантажити довідник</button>
                 </div>
             `;
-            debugDiv.style.borderColor = "#ffe58f";
-            debugDiv.style.background = "#fffbe6";
+            debugDiv.style.borderColor = "#bae0ff";
+            debugDiv.style.background = "#e6f4ff";
             
             setTimeout(() => {
                 const btn = document.getElementById('cat-xml-btn');
@@ -981,10 +983,10 @@ async function openModal(summaryProduct) {
                 if (type === 'attributes') {
                     const categoryId = currentEditingProduct.category ? currentEditingProduct.category.id : null;
                     const catSchema = categoryId && promAttributesDb[categoryId] ? promAttributesDb[categoryId] : null;
-                    if (!catSchema) {
-                        throw new Error('Довідник для цієї категорії не завантажено! Будь ласка, спочатку завантажте його (повідомлення над атрибутами).');
+                    // Якщо довідник є в базі — передаємо його, якщо немає — ШІ підбере характеристики за описом
+                    if (catSchema) {
+                        requestBody.schema = catSchema;
                     }
-                    requestBody.schema = catSchema;
                 }
 
                 const response = await fetch(`${API_BASE}/generate`, {
@@ -1010,10 +1012,26 @@ async function openModal(summaryProduct) {
                 } else if (type === 'description') {
                     document.getElementById('ai-desc-uk').value = textRes || '';
                 } else if (type === 'attributes') {
-                    if (typeof textRes === 'object') {
-                        Object.keys(textRes).forEach(id => {
-                            const val = textRes[id];
-                            const nameInput = document.querySelector(`.attr-name[data-id="${id}"]`);
+                    if (typeof textRes === 'object' && textRes !== null) {
+                        const attrContainer = document.getElementById('attributes-container');
+                        
+                        Object.keys(textRes).forEach(key => {
+                            const val = textRes[key];
+                            if (val === undefined || val === null || (Array.isArray(val) && val.length === 0)) return;
+                            
+                            // 1. Шукаємо за data-id="${key}"
+                            let nameInput = document.querySelector(`.attr-name[data-id="${key}"]`);
+                            
+                            // 2. Якщо не знайдено за ID, шукаємо за назвою характеристики
+                            if (!nameInput) {
+                                document.querySelectorAll('.attr-name').forEach(input => {
+                                    if (input.value && input.value.trim().toLowerCase() === String(key).trim().toLowerCase()) {
+                                        nameInput = input;
+                                    }
+                                });
+                            }
+                            
+                            // 3. Якщо поле вже є на формі — заповнюємо його
                             if (nameInput) {
                                 const row = nameInput.closest('.attr-item');
                                 const valInput = row.querySelector('.attr-value');
@@ -1021,13 +1039,35 @@ async function openModal(summaryProduct) {
                                 if (valInput.classList.contains('multi-checkbox-container')) {
                                     const valArray = Array.isArray(val) ? val : [val];
                                     valInput.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-                                        cb.checked = valArray.includes(cb.value);
+                                        cb.checked = valArray.some(v => String(v).trim().toLowerCase() === cb.value.trim().toLowerCase());
                                     });
                                 } else if (valInput.tagName.toLowerCase() === 'select') {
-                                    valInput.value = Array.isArray(val) ? val[0] : val;
+                                    const targetVal = Array.isArray(val) ? val[0] : val;
+                                    let matched = false;
+                                    for (let opt of valInput.options) {
+                                        if (opt.value.trim().toLowerCase() === String(targetVal).trim().toLowerCase()) {
+                                            valInput.value = opt.value;
+                                            matched = true;
+                                            break;
+                                        }
+                                    }
+                                    // Якщо точного значення немає у списку Прому, створюємо нове щоб не губилося
+                                    if (!matched && targetVal) {
+                                        const newOpt = document.createElement('option');
+                                        newOpt.value = targetVal;
+                                        newOpt.textContent = targetVal;
+                                        newOpt.selected = true;
+                                        valInput.appendChild(newOpt);
+                                        valInput.value = targetVal;
+                                    }
                                 } else {
                                     valInput.value = Array.isArray(val) ? val.join(', ') : val;
                                 }
+                            } else {
+                                // 4. Якщо характеристики ще не було (без схеми) — створюємо новий рядок!
+                                const strVal = Array.isArray(val) ? val.join(', ') : String(val);
+                                const newRow = createAttributeRow(key, strVal);
+                                attrContainer.appendChild(newRow);
                             }
                         });
                         console.log('Характеристики успішно згенеровані та підставлені!');
@@ -1047,11 +1087,16 @@ async function openModal(summaryProduct) {
                 }
 
             } catch (error) {
-                if (!window.isBulkRunning) {
-                    alert(error.message);
-                } else {
-                    console.warn(`Bulk generation error on ${type}:`, error.message);
+                const msg = error.message || '';
+                const isFatal = msg.includes('токен') || msg.includes('ключ') || msg.includes('balance') || msg.includes('баланс') || msg.includes('Unauthorized') || msg.includes('401') || msg.includes('403');
+                if (!window.isBulkRunning || isFatal) {
+                    alert(`Помилка ШІ: ${msg}`);
                 }
+                if (isFatal && window.isBulkRunning) {
+                    window.bulkAbortFatal = true;
+                    window.bulkAbortFatalMessage = msg;
+                }
+                console.warn(`Bulk generation error on ${type}:`, msg);
             } finally {
                 e.target.textContent = originalText;
                 e.target.disabled = false;
@@ -1581,26 +1626,6 @@ async function openModal(summaryProduct) {
                 return;
             }
 
-            // Перевірка категорій потрібна ТІЛЬКИ якщо генеруються характеристики!
-            if (opts.attributes) {
-                const missingCategories = new Set();
-                const missingCategoryNames = new Set();
-                ids.forEach(id => {
-                    const p = currentProducts.find(prod => String(prod.id) === String(id));
-                    if (p && p.category_id && p.category_id !== '0' && p.category_id !== 0) {
-                        if (!promAttributesDb[p.category_id]) {
-                            missingCategories.add(p.category_id);
-                            missingCategoryNames.add(p.category?.name || p.category_id);
-                        }
-                    }
-                });
-                
-                if (missingCategories.size > 0) {
-                    alert(`Помилка! Відсутні довідники характеристик для таких категорій:\n\n${Array.from(missingCategoryNames).join('\n')}\n\nНеможливо згенерувати характеристики. Будь ласка, зніміть галочку "⚙️ Характеристики" або спочатку завантажте довідники для цих категорій.`);
-                    return;
-                }
-            }
-            
             const fieldsList = [];
             if (opts.keywords) fieldsList.push('SEO ключі');
             if (opts.desc) fieldsList.push('опис');
@@ -1614,10 +1639,18 @@ async function openModal(summaryProduct) {
             }
             
             window.isBulkRunning = true;
+            window.bulkAbortFatal = false;
+            window.bulkAbortFatalMessage = '';
             bulkOverlay.style.display = 'flex';
             
+            let processedSuccess = 0;
             try {
                 for (let i = 0; i < ids.length; i++) {
+                    if (window.bulkAbortFatal) {
+                        alert(`❌ Масову генерацію зупинено через критичну помилку ШІ:\n\n${window.bulkAbortFatalMessage || 'Помилка API ключа'}\n\nБудь ласка, перевірте API ключ або баланс.`);
+                        break;
+                    }
+
                     const id = ids[i];
                     const product = currentProducts.find(p => String(p.id) === id);
                     if (!product) continue;
@@ -1634,6 +1667,12 @@ async function openModal(summaryProduct) {
                         await executeAutoFill(opts);
                         await new Promise(r => setTimeout(r, 500)); // Пауза перед збереженням
                         
+                        if (window.bulkAbortFatal) {
+                            const closeBtn = document.querySelector('.close-modal');
+                            if (closeBtn) closeBtn.click();
+                            break;
+                        }
+
                         // 3. Зберігаємо в XLSX чергу
                         const saveBtn = document.getElementById('save-btn');
                         if (saveBtn) {
@@ -1645,14 +1684,17 @@ async function openModal(summaryProduct) {
                         const closeBtn = document.querySelector('.close-modal');
                         if (closeBtn) closeBtn.click();
                         await new Promise(r => setTimeout(r, 400));
+                        processedSuccess++;
                         
                     } catch (err) {
                         console.error('Помилка Bulk Magic на товарі', id, err);
+                        const closeBtn = document.querySelector('.close-modal');
+                        if (closeBtn) closeBtn.click();
                     }
                 }
                 
                 bulkProgressFill.style.width = `100%`;
-                bulkProgressText.textContent = `Готово! Оброблено ${ids.length} товарів.`;
+                bulkProgressText.textContent = `Готово! Оброблено ${processedSuccess} товарів.`;
                 
                 await new Promise(r => setTimeout(r, 1500));
             } finally {
@@ -1662,7 +1704,9 @@ async function openModal(summaryProduct) {
 
             selectedProductIds.clear();
             renderProducts(currentProducts);
-            alert(`Масову обробку завершено! ${ids.length} товарів успішно згенеровано і додано в чергу.`);
+            if (!window.bulkAbortFatal) {
+                alert(`Масову обробку завершено! ${processedSuccess} з ${ids.length} товарів успішно збережено в чергу XLSX.`);
+            }
         });
     }
 });
